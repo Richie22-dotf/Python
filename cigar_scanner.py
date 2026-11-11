@@ -4,6 +4,50 @@ from PIL import Image, ImageTk
 import os
 
 CIGAR_DB = {
+    "INCH Nicaragua No. 60": {
+        "brand": "E.P. Carrillo",
+        "origin": "Nicaragua",
+        "wrapper": "Nicaraguan Habano",
+        "binder": "Nicaraguan",
+        "filler": "Nicaraguan (Esteli & Condega)",
+        "strength": 85,
+        "strength_label": "Medium-Full to Full",
+        "notes": "Bold black pepper, dark espresso, rich leather, toasted cedar, and subtle sweet spice.",
+        "pairing": "Barrel-Proof Bourbon, Dark Rum, or Double Espresso"
+    },
+    "New World by AJ Fernandez Navegante": {
+        "brand": "AJ Fernandez",
+        "origin": "Nicaragua",
+        "wrapper": "Nicaraguan Oscuro",
+        "binder": "Nicaraguan Jalapa",
+        "filler": "Nicaraguan (Ometepe, Condega & Esteli)",
+        "strength": 88,
+        "strength_label": "Full-Bodied",
+        "notes": "Dark cocoa, roasted coffee beans, rich earth, black cherry, and signature AJ pepper.",
+        "pairing": "Single Malt Scotch, Imperial Stout, or Espresso"
+    },
+    "Ashton VSG (Virgin Sun Grown) Sorcerer": {
+        "brand": "Ashton",
+        "origin": "Dominican Republic",
+        "wrapper": "Ecuadorian Sumatra (Sun-Grown)",
+        "binder": "Dominican",
+        "filler": "Dominican (Aged 4-5 Years)",
+        "strength": 90,
+        "strength_label": "Full-Bodied",
+        "notes": "Rich cedar, espresso, dark chocolate, warm leather, and a bold spicy finish.",
+        "pairing": "XO Cognac, Tawny Port, or Neat Bourbon"
+    },
+    "Drew Estate Undercrown Maduro Gran Toro": {
+        "brand": "Drew Estate",
+        "origin": "Nicaragua",
+        "wrapper": "Mexican San Andres Maduro",
+        "binder": "Connecticut Habano",
+        "filler": "Brazilian Mata Fina & Nicaraguan",
+        "strength": 78,
+        "strength_label": "Medium-Full",
+        "notes": "Velvety dark chocolate, sweet espresso, earth, cream, and balanced black pepper.",
+        "pairing": "Porter Beer, Bourbon, or Cappuccino"
+    },
     "Padron 1964 Anniversary Exclusivo": {
         "brand": "Padron",
         "origin": "Nicaragua",
@@ -91,6 +135,94 @@ CIGAR_DB = {
         "strength_label": "Full-Bodied",
         "notes": "Dark chocolate-covered raisins, espresso, cloves, leather, and signature Nicaraguan pepper.",
         "pairing": "Cabernet Sauvignon, Bourbon, or Dark Roast Coffee"
+    },
+    "Cohiba Behike 54": {
+        "brand": "Cohiba",
+        "origin": "Cuba",
+        "wrapper": "Cuban Colorado (Medio Tiempo Leaf)",
+        "binder": "Cuban",
+        "filler": "Cuban",
+        "strength": 82,
+        "strength_label": "Medium-Full",
+        "notes": "Creamy roasted coffee, honeyed cedar, sweet earth, vanilla bean, and refined white pepper.",
+        "pairing": "Aged Cuban Rum, Vintage Champagne, or Espresso"
+    },
+    "Perdomo 10th Anniversary Champagne Epicure": {
+        "brand": "Perdomo",
+        "origin": "Nicaragua",
+        "wrapper": "Ecuadorian Connecticut (Triple-Aged)",
+        "binder": "Nicaraguan",
+        "filler": "Nicaraguan (Cuban-Seed)",
+        "strength": 40,
+        "strength_label": "Mild to Medium",
+        "notes": "Smooth cream, toasted almonds, sweet honey, light oak, and a crisp buttery finish.",
+        "pairing": "Morning Coffee, Champagne, or Crisp Pinot Grigio"
+    },
+    "Plasencia Alma Fuerte Sixto II Hexagon": {
+        "brand": "Plasencia",
+        "origin": "Nicaragua",
+        "wrapper": "Nicaraguan Jalapa",
+        "binder": "Nicaraguan",
+        "filler": "Nicaraguan (Aged 10 Years)",
+        "strength": 90,
+        "strength_label": "Full-Bodied",
+        "notes": "Dark chocolate, plum, cinnamon spice, roasted walnut, and rich molasses.",
+        "pairing": "Single Barrel Bourbon, Tawny Port, or Dark Roast Coffee"
+    },
+    "Arturo Fuente Hemingway Short Story": {
+        "brand": "Arturo Fuente",
+        "origin": "Dominican Republic",
+        "wrapper": "African Cameroon",
+        "binder": "Dominican",
+        "filler": "Dominican",
+        "strength": 58,
+        "strength_label": "Medium-Bodied",
+        "notes": "Sweet natural cedar, baking spices, dried fruit, cream, and subtle clove.",
+        "pairing": "Cappuccino, Spiced Rum, or Pinot Noir"
+    },
+    "Padron 1926 Serie No. 9 Maduro": {
+        "brand": "Padron",
+        "origin": "Nicaragua",
+        "wrapper": "Nicaraguan Maduro (Aged 5 Years)",
+        "binder": "Nicaraguan",
+        "filler": "Nicaraguan",
+        "strength": 94,
+        "strength_label": "Full-Bodied",
+        "notes": "Intense dark cacao, espresso crema, black cherry, leather, and bold black pepper.",
+        "pairing": "Cask Strength Bourbon, XO Cognac, or Espresso"
+    },
+    "Rocky Patel Decade Toro": {
+        "brand": "Rocky Patel",
+        "origin": "Honduras",
+        "wrapper": "Ecuadorian Sumatra",
+        "binder": "Honduran",
+        "filler": "Nicaraguan & Honduran",
+        "strength": 75,
+        "strength_label": "Medium-Full",
+        "notes": "Dark chocolate, black cherry, toasted nuts, sweet spice, and smooth cedar.",
+        "pairing": "Wheated Bourbon, Merlot, or Dark Coffee"
+    },
+    "Foundation The Tabernacle Corona": {
+        "brand": "Foundation Cigar Co.",
+        "origin": "Nicaragua",
+        "wrapper": "Connecticut Broadleaf Maduro",
+        "binder": "Mexican San Andres",
+        "filler": "Nicaraguan & Honduran",
+        "strength": 92,
+        "strength_label": "Full-Bodied",
+        "notes": "Rich cacao, dark roast coffee, black pepper, damp earth, and natural sweetness.",
+        "pairing": "Peated Scotch, Imperial Stout, or Black Coffee"
+    },
+    "E.P. Carrillo Pledge Prequel": {
+        "brand": "E.P. Carrillo",
+        "origin": "Dominican Republic",
+        "wrapper": "Connecticut Habano",
+        "binder": "Ecuadorian",
+        "filler": "Nicaraguan",
+        "strength": 86,
+        "strength_label": "Medium-Full to Full",
+        "notes": "Baked apple, black pepper, licorice, dark chocolate, and toasted oak.",
+        "pairing": "Rye Whiskey, Vintage Port, or Americano"
     }
 }
 
