@@ -52,7 +52,10 @@ def clear_system_cache():
 # Main Layout Architecture Setup
 root = tk.Tk()
 root.title("Mac Commander Engine v2.0")
-root.geometry("600x560") # Made taller to beautifully fit the new storage array
+root.geometry("600x560") 
+import sys
+if len(sys.argv) > 1:
+    root.geometry(sys.argv.pop())# Made taller to beautifully fit the new storage array
 root.configure(bg="#121212")
 
 # Header Block

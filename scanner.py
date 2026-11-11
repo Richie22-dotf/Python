@@ -70,6 +70,9 @@ def update_ui(devices):
 root = tk.Tk()
 root.title("Cybersecurity Network Mapper v2.0")
 root.geometry("650x450")
+import sys
+if len(sys.argv) > 1:
+    root.geometry(sys.argv.pop())
 root.configure(bg="#1E1E1E")
 
 title_label = tk.Label(root, text="⚡ NETWORK RECONNAISSANCE & UNMASKING ⚡", font=("Courier", 14, "bold"), bg="#1E1E1E", fg="#00FF00")

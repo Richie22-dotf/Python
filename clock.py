@@ -16,7 +16,10 @@ def update_time():
 # Main layout setup (Keeping your blue theme!)
 root = tk.Tk()
 root.title("My Live Digital Clock & Date")
-root.geometry("450x200") # Made slightly taller for the date
+root.geometry("450x200") 
+import sys
+if len(sys.argv) > 1:
+    root.geometry(sys.argv.pop())# Made slightly taller for the date
 root.configure(bg="blue")
 
 # Time display string

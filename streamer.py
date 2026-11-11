@@ -77,6 +77,9 @@ def update_asset_display(label_widget, name, current_price, asset_key):
 root = tk.Tk()
 root.title("Global Multi-Market Streamer v2.1")
 root.geometry("580x520")
+import sys
+if len(sys.argv) > 1:
+    root.geometry(sys.argv[1])                
 root.configure(bg="#0D1117")
 
 header = tk.Label(root, text="📈 GLOBAL MULTI-MARKET STREAMER 📈", font=("Courier", 15, "bold"), bg="#0D1117", fg="#58A6FF")
