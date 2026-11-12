@@ -25,15 +25,19 @@ st.markdown("""
     }
     .gold-label { color: #D4AF37; font-weight: bold; letter-spacing: 1px; font-size: 0.85em; }
     
-    /* Force Primary & Standard Buttons to Gold Lounge Theme */
-    div.stButton > button, button[kind="primary"] {
+    /* Override Streamlit Primary Red with Lounge Gold */
+    button[data-testid="stBaseButton-primary"],
+    button[data-testid="stBaseButton-secondary"],
+    div.stButton > button {
         background-color: #D4AF37 !important;
         color: #1C110A !important;
         border: 1px solid #F5E6CC !important;
         font-weight: bold !important;
         border-radius: 8px !important;
     }
-    div.stButton > button:hover, button[kind="primary"]:hover {
+    button[data-testid="stBaseButton-primary"]:hover,
+    button[data-testid="stBaseButton-secondary"]:hover,
+    div.stButton > button:hover {
         background-color: #E5C158 !important;
         color: #1C110A !important;
     }
@@ -86,18 +90,18 @@ with tab_scan:
                         img_rgb = pil_img.copy().convert("RGB")
                         img_rgb.thumbnail((800, 800))
 
-                        # Prioritize high-capacity production & lite Flash models to avoid 503 spikes
-                        priority_models = [
-                            "gemini-2.5-flash-lite",
-                            "gemini-2.0-flash",
+                        # Use current active Gemini 3 models with automatic retry on 503 spikes
+                        models_to_try = [
+                            "gemini-3.8-flash",
+                            "gemini-3.1-pro-preview",
                             "gemini-3.8-flash-lite",
                             "gemini-3.8-flash",
-                            "gemini-2.5-pro"
+                            "gemini-3.1-pro-preview"
                         ]
 
                         res = None
                         last_err = ""
-                        for m_name in priority_models:
+                        for m_name in models_to_try:
                             try:
                                 res = client.models.generate_content(
                                     model=m_name,
@@ -108,17 +112,17 @@ with tab_scan:
                                     break
                             except Exception as inner_e:
                                 last_err = str(inner_e)
-                                time.sleep(1)
+                                time.sleep(2)
                                 continue
 
                         if not res or not res.text:
-                            raise Exception(last_err or "Servers busy. Please try again in a few seconds.")
+                            raise Exception(last_err or "Servers temporarily busy. Please tap Identify again.")
 
                         data = json.loads(res.text)
                         name = data["cigar_name"]
                         st.session_state.cigar_db[name] = data
                         st.session_state.selected_cigar = name
-                        st.success(f"✅ Matched: {name} — Switch to the 'Digital Humidor' tab to view full tasting notes!")
+                        st.success(f"✅ Matched: {name} — Tap 'Digital Humidor' above to view full tasting notes!")
                     except Exception as e:
                         st.error(f"Scan error: {e}")
 
