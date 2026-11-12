@@ -25,7 +25,6 @@ st.markdown("""
     }
     .gold-label { color: #D4AF37; font-weight: bold; letter-spacing: 1px; font-size: 0.85em; }
     
-    /* Override Streamlit Primary Red with Lounge Gold */
     button[data-testid="stBaseButton-primary"],
     button[data-testid="stBaseButton-secondary"],
     div.stButton > button {
@@ -34,12 +33,6 @@ st.markdown("""
         border: 1px solid #F5E6CC !important;
         font-weight: bold !important;
         border-radius: 8px !important;
-    }
-    button[data-testid="stBaseButton-primary"]:hover,
-    button[data-testid="stBaseButton-secondary"]:hover,
-    div.stButton > button:hover {
-        background-color: #E5C158 !important;
-        color: #1C110A !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -90,33 +83,40 @@ with tab_scan:
                         img_rgb = pil_img.copy().convert("RGB")
                         img_rgb.thumbnail((800, 800))
 
-                        # Use current active Gemini 3 models with automatic retry on 503 spikes
-                        models_to_try = [
-                            "gemini-3.8-flash",
-                            "gemini-3.1-pro-preview",
-                            "gemini-3.8-flash-lite",
-                            "gemini-3.8-flash",
-                            "gemini-3.1-pro-preview"
+                        # Query Google directly for the exact models active on your API key
+                        live_models = [
+                            m.name.replace("models/", "") for m in client.models.list()
+                            if "gemini" in m.name.lower()
+                            and not any(x in m.name.lower() for x in ["audio", "tts", "embedding", "vision-001", "aqa", "imagen", "veo"])
                         ]
+                        # Prioritize Flash & Lite models first (faster and highest availability)
+                        live_models.sort(key=lambda x: (0 if "lite" in x else (1 if "flash" in x else 2), x))
 
                         res = None
-                        last_err = ""
-                        for m_name in models_to_try:
-                            try:
-                                res = client.models.generate_content(
-                                    model=m_name,
-                                    contents=[img_rgb, "Identify this exact cigar from its band and wrapper. Provide accurate sommelier details."],
-                                    config={"response_mime_type": "application/json", "response_schema": CigarProfile},
-                                )
-                                if res and res.text:
+                        tried_log = []
+                        for m_name in live_models:
+                            # Try each active model up to 2 times in case of a brief 503 spike
+                            for attempt in range(2):
+                                try:
+                                    res = client.models.generate_content(
+                                        model=m_name,
+                                        contents=[img_rgb, "Identify this exact cigar from its band and wrapper. Provide accurate sommelier details."],
+                                        config={"response_mime_type": "application/json", "response_schema": CigarProfile},
+                                    )
+                                    if res and res.text:
+                                        break
+                                except Exception as inner_e:
+                                    err_str = str(inner_e)
+                                    tried_log.append(f"{m_name}: {err_str[:60]}")
+                                    if "503" in err_str:
+                                        time.sleep(2)
+                                        continue
                                     break
-                            except Exception as inner_e:
-                                last_err = str(inner_e)
-                                time.sleep(2)
-                                continue
+                            if res and res.text:
+                                break
 
                         if not res or not res.text:
-                            raise Exception(last_err or "Servers temporarily busy. Please tap Identify again.")
+                            raise Exception(f"Tried models: {tried_log[:4]}")
 
                         data = json.loads(res.text)
                         name = data["cigar_name"]
