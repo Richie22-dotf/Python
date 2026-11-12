@@ -1,438 +1,161 @@
+from pillow_heif import register_heif_opener
+register_heif_opener()
+
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
-import os
+from google import genai
+from pydantic import BaseModel
+import threading, json, os
+
+class CigarProfile(BaseModel):
+    cigar_name: str
+    brand: str
+    origin: str
+    wrapper: str
+    binder: str
+    filler: str
+    strength: int
+    strength_label: str
+    notes: str
+    pairing: str
 
 CIGAR_DB = {
-    "INCH Nicaragua No. 60": {
-        "brand": "E.P. Carrillo",
-        "origin": "Nicaragua",
-        "wrapper": "Nicaraguan Habano",
-        "binder": "Nicaraguan",
-        "filler": "Nicaraguan (Esteli & Condega)",
-        "strength": 85,
-        "strength_label": "Medium-Full to Full",
-        "notes": "Bold black pepper, dark espresso, rich leather, toasted cedar, and subtle sweet spice.",
-        "pairing": "Barrel-Proof Bourbon, Dark Rum, or Double Espresso"
-    },
-    "New World by AJ Fernandez Navegante": {
-        "brand": "AJ Fernandez",
-        "origin": "Nicaragua",
-        "wrapper": "Nicaraguan Oscuro",
-        "binder": "Nicaraguan Jalapa",
-        "filler": "Nicaraguan (Ometepe, Condega & Esteli)",
-        "strength": 88,
-        "strength_label": "Full-Bodied",
-        "notes": "Dark cocoa, roasted coffee beans, rich earth, black cherry, and signature AJ pepper.",
-        "pairing": "Single Malt Scotch, Imperial Stout, or Espresso"
-    },
-    "Ashton VSG (Virgin Sun Grown) Sorcerer": {
-        "brand": "Ashton",
-        "origin": "Dominican Republic",
-        "wrapper": "Ecuadorian Sumatra (Sun-Grown)",
-        "binder": "Dominican",
-        "filler": "Dominican (Aged 4-5 Years)",
-        "strength": 90,
-        "strength_label": "Full-Bodied",
-        "notes": "Rich cedar, espresso, dark chocolate, warm leather, and a bold spicy finish.",
-        "pairing": "XO Cognac, Tawny Port, or Neat Bourbon"
-    },
-    "Drew Estate Undercrown Maduro Gran Toro": {
-        "brand": "Drew Estate",
-        "origin": "Nicaragua",
-        "wrapper": "Mexican San Andres Maduro",
-        "binder": "Connecticut Habano",
-        "filler": "Brazilian Mata Fina & Nicaraguan",
-        "strength": 78,
-        "strength_label": "Medium-Full",
-        "notes": "Velvety dark chocolate, sweet espresso, earth, cream, and balanced black pepper.",
-        "pairing": "Porter Beer, Bourbon, or Cappuccino"
-    },
-    "Padron 1964 Anniversary Exclusivo": {
-        "brand": "Padron",
-        "origin": "Nicaragua",
-        "wrapper": "Nicaraguan Maduro (Sun-Grown)",
-        "binder": "Nicaraguan",
-        "filler": "Nicaraguan (Aged 4 Years)",
-        "strength": 85,
-        "strength_label": "Medium-Full to Full",
-        "notes": "Rich dark cocoa, espresso bean, toasted almond, black pepper, and a velvety sweet cedar finish.",
-        "pairing": "Aged Single Malt Scotch, Bourbon, or Double Espresso"
-    },
-    "Arturo Fuente OpusX Robusto": {
-        "brand": "Arturo Fuente",
-        "origin": "Dominican Republic",
-        "wrapper": "Dominican Rosado (Chateau de la Fuente)",
-        "binder": "Dominican",
-        "filler": "Dominican",
-        "strength": 95,
-        "strength_label": "Full-Bodied",
-        "notes": "Bold baking spices, leather, dried cherry, sweet cedar, and intense white pepper.",
-        "pairing": "XO Cognac, Vintage Port, or Neat Anejo Tequila"
-    },
-    "Montecristo No. 2": {
-        "brand": "Montecristo",
-        "origin": "Cuba / Dominican",
-        "wrapper": "Connecticut Shade / Cuban Seed",
-        "binder": "Dominican / Cuban",
-        "filler": "Dominican / Cuban",
-        "strength": 60,
-        "strength_label": "Medium-Bodied",
-        "notes": "Creamy toasted nuts, warm cinnamon, smooth leather, tangy citrus zest, and sweet wood.",
-        "pairing": "Cappuccino, Champagne, or Aged Rum"
-    },
-    "Liga Privada No. 9 Toro": {
-        "brand": "Drew Estate",
-        "origin": "Nicaragua",
-        "wrapper": "Connecticut Broadleaf Oscuro",
-        "binder": "Brazilian Mata Fina",
-        "filler": "Honduran & Nicaraguan",
-        "strength": 90,
-        "strength_label": "Full-Bodied",
-        "notes": "Thick oily smoke with dark chocolate, earth, charred oak, black coffee, and subtle molasses.",
-        "pairing": "Imperial Stout, Barrel-Proof Bourbon, or Dark Rum"
-    },
-    "Davidoff Winston Churchill Late Hour": {
-        "brand": "Davidoff",
-        "origin": "Dominican Republic",
-        "wrapper": "Ecuadorian Habano Marron",
-        "binder": "Mexican San Andres Negro",
-        "filler": "Nicaraguan & Dominican (Aged in Scotch Casks)",
-        "strength": 75,
-        "strength_label": "Medium-Full",
-        "notes": "Oak wood, dark roast coffee, sweet caramel, leather, and subtle smoky whisky undertones.",
-        "pairing": "Single Malt Whisky, Bourbon, or Black Coffee"
-    },
-    "Oliva Serie V Melanio Figurado": {
-        "brand": "Oliva",
-        "origin": "Nicaragua",
-        "wrapper": "Ecuadorian Sumatra",
-        "binder": "Nicaraguan",
-        "filler": "Nicaraguan Jalapa Ligero",
-        "strength": 80,
-        "strength_label": "Medium-Full",
-        "notes": "Toasted caramel, rich leather, roasted hazelnuts, cocoa powder, and balanced spice.",
-        "pairing": "Rye Whiskey, Espresso Martini, or Tawny Port"
-    },
-    "Ashton Classic Magnum": {
-        "brand": "Ashton",
-        "origin": "Dominican Republic",
-        "wrapper": "Connecticut Shade (Golden Blonde)",
-        "binder": "Dominican",
-        "filler": "Dominican (Aged 3-4 Years)",
-        "strength": 35,
-        "strength_label": "Mild to Medium",
-        "notes": "Silky buttered toast, vanilla bean, light cedar, cashew, and a clean creamy finish.",
-        "pairing": "Morning Latte, Chardonnay, or Light Blonde Ale"
-    },
-    "My Father Le Bijou 1922 Torpedo": {
-        "brand": "My Father Cigars",
-        "origin": "Nicaragua",
-        "wrapper": "Nicaraguan Habano Oscuro",
-        "binder": "Nicaraguan",
-        "filler": "Nicaraguan",
-        "strength": 92,
-        "strength_label": "Full-Bodied",
-        "notes": "Dark chocolate-covered raisins, espresso, cloves, leather, and signature Nicaraguan pepper.",
-        "pairing": "Cabernet Sauvignon, Bourbon, or Dark Roast Coffee"
-    },
-    "Cohiba Behike 54": {
-        "brand": "Cohiba",
-        "origin": "Cuba",
-        "wrapper": "Cuban Colorado (Medio Tiempo Leaf)",
-        "binder": "Cuban",
-        "filler": "Cuban",
-        "strength": 82,
-        "strength_label": "Medium-Full",
-        "notes": "Creamy roasted coffee, honeyed cedar, sweet earth, vanilla bean, and refined white pepper.",
-        "pairing": "Aged Cuban Rum, Vintage Champagne, or Espresso"
-    },
-    "Perdomo 10th Anniversary Champagne Epicure": {
-        "brand": "Perdomo",
-        "origin": "Nicaragua",
-        "wrapper": "Ecuadorian Connecticut (Triple-Aged)",
-        "binder": "Nicaraguan",
-        "filler": "Nicaraguan (Cuban-Seed)",
-        "strength": 40,
-        "strength_label": "Mild to Medium",
-        "notes": "Smooth cream, toasted almonds, sweet honey, light oak, and a crisp buttery finish.",
-        "pairing": "Morning Coffee, Champagne, or Crisp Pinot Grigio"
-    },
-    "Plasencia Alma Fuerte Sixto II Hexagon": {
-        "brand": "Plasencia",
-        "origin": "Nicaragua",
-        "wrapper": "Nicaraguan Jalapa",
-        "binder": "Nicaraguan",
-        "filler": "Nicaraguan (Aged 10 Years)",
-        "strength": 90,
-        "strength_label": "Full-Bodied",
-        "notes": "Dark chocolate, plum, cinnamon spice, roasted walnut, and rich molasses.",
-        "pairing": "Single Barrel Bourbon, Tawny Port, or Dark Roast Coffee"
-    },
-    "Arturo Fuente Hemingway Short Story": {
-        "brand": "Arturo Fuente",
-        "origin": "Dominican Republic",
-        "wrapper": "African Cameroon",
-        "binder": "Dominican",
-        "filler": "Dominican",
-        "strength": 58,
-        "strength_label": "Medium-Bodied",
-        "notes": "Sweet natural cedar, baking spices, dried fruit, cream, and subtle clove.",
-        "pairing": "Cappuccino, Spiced Rum, or Pinot Noir"
-    },
-    "Padron 1926 Serie No. 9 Maduro": {
-        "brand": "Padron",
-        "origin": "Nicaragua",
-        "wrapper": "Nicaraguan Maduro (Aged 5 Years)",
-        "binder": "Nicaraguan",
-        "filler": "Nicaraguan",
-        "strength": 94,
-        "strength_label": "Full-Bodied",
-        "notes": "Intense dark cacao, espresso crema, black cherry, leather, and bold black pepper.",
-        "pairing": "Cask Strength Bourbon, XO Cognac, or Espresso"
-    },
-    "Rocky Patel Decade Toro": {
-        "brand": "Rocky Patel",
-        "origin": "Honduras",
-        "wrapper": "Ecuadorian Sumatra",
-        "binder": "Honduran",
-        "filler": "Nicaraguan & Honduran",
-        "strength": 75,
-        "strength_label": "Medium-Full",
-        "notes": "Dark chocolate, black cherry, toasted nuts, sweet spice, and smooth cedar.",
-        "pairing": "Wheated Bourbon, Merlot, or Dark Coffee"
-    },
-    "Foundation The Tabernacle Corona": {
-        "brand": "Foundation Cigar Co.",
-        "origin": "Nicaragua",
-        "wrapper": "Connecticut Broadleaf Maduro",
-        "binder": "Mexican San Andres",
-        "filler": "Nicaraguan & Honduran",
-        "strength": 92,
-        "strength_label": "Full-Bodied",
-        "notes": "Rich cacao, dark roast coffee, black pepper, damp earth, and natural sweetness.",
-        "pairing": "Peated Scotch, Imperial Stout, or Black Coffee"
-    },
-    "E.P. Carrillo Pledge Prequel": {
-        "brand": "E.P. Carrillo",
-        "origin": "Dominican Republic",
-        "wrapper": "Connecticut Habano",
-        "binder": "Ecuadorian",
-        "filler": "Nicaraguan",
-        "strength": 86,
-        "strength_label": "Medium-Full to Full",
-        "notes": "Baked apple, black pepper, licorice, dark chocolate, and toasted oak.",
-        "pairing": "Rye Whiskey, Vintage Port, or Americano"
-    }
+    "INCH Nicaragua No. 60": {"brand": "E.P. Carrillo", "origin": "Nicaragua", "wrapper": "Nicaraguan Habano", "binder": "Nicaraguan", "filler": "Nicaraguan", "strength": 85, "strength_label": "Medium-Full", "notes": "Bold black pepper, dark espresso, rich leather, and toasted cedar.", "pairing": "Bourbon or Double Espresso"},
+    "New World by AJ Fernandez": {"brand": "AJ Fernandez", "origin": "Nicaragua", "wrapper": "Nicaraguan Oscuro", "binder": "Nicaraguan", "filler": "Nicaraguan", "strength": 88, "strength_label": "Full-Bodied", "notes": "Dark cocoa, roasted coffee, rich earth, and signature AJ pepper.", "pairing": "Single Malt Scotch or Espresso"},
+    "Ashton VSG Sorcerer": {"brand": "Ashton", "origin": "Dominican Republic", "wrapper": "Ecuadorian Sumatra", "binder": "Dominican", "filler": "Dominican", "strength": 90, "strength_label": "Full-Bodied", "notes": "Rich cedar, espresso, dark chocolate, leather, and bold spice.", "pairing": "XO Cognac or Neat Bourbon"},
+    "Drew Estate Undercrown Maduro": {"brand": "Drew Estate", "origin": "Nicaragua", "wrapper": "Mexican San Andres", "binder": "Connecticut", "filler": "Brazilian & Nicaraguan", "strength": 78, "strength_label": "Medium-Full", "notes": "Velvety dark chocolate, sweet espresso, earth, and black pepper.", "pairing": "Porter Beer or Cappuccino"},
+    "Ashton Classic Magnum": {"brand": "Ashton", "origin": "Dominican Republic", "wrapper": "Connecticut Shade", "binder": "Dominican", "filler": "Dominican", "strength": 35, "strength_label": "Mild to Medium", "notes": "Silky buttered toast, vanilla bean, light cedar, and cashew.", "pairing": "Morning Latte or Chardonnay"}
 }
 
-BG_MAHOGANY = "#1C110A"
-PANEL_LEATHER = "#2A1A10"
-GOLD_ACCENT = "#D4AF37"
-CREAM_TEXT = "#F5E6CC"
-MUTED_TAN = "#B89F82"
-
+BG, CARD, GOLD, CREAM, TAN = "#1C110A", "#2A1A10", "#D4AF37", "#F5E6CC", "#B89F82"
 current_photo = None
 
-def upload_cigar_photo():
+def analyze_cigar(pil_img):
+    def worker():
+        try:
+            key = os.environ.get("GEMINI_API_KEY")
+            if not key:
+                root.after(0, lambda: status_lbl.config(text="MISSING GEMINI_API_KEY", fg="#FF5555"))
+                return
+            client = genai.Client(api_key=key)
+            img_rgb = pil_img.copy().convert("RGB")
+            img_rgb.thumbnail((800, 800))
+
+            candidates = [
+                m.name.replace("models/", "") for m in client.models.list()
+                if "flash" in m.name.lower() and not any(x in m.name.lower() for x in ["audio", "tts", "lite", "8b"])
+            ]
+            if not candidates:
+                candidates = ["gemini-2.5-flash", "gemini-2.0-flash"]
+
+            res = None
+            last_err = ""
+            for m_name in candidates:
+                try:
+                    root.after(0, lambda m=m_name: status_lbl.config(text=f"SCANNING VIA {m}...", fg="#00E6FF"))
+                    res = client.models.generate_content(
+                        model=m_name,
+                        contents=[img_rgb, "Identify this cigar from its band and wrapper. Provide accurate sommelier details."],
+                        config={"response_mime_type": "application/json", "response_schema": CigarProfile},
+                    )
+                    if res and res.text:
+                        break
+                except Exception as inner_e:
+                    last_err = str(inner_e)[:42]
+                    continue
+
+            if not res or not res.text:
+                raise Exception(last_err or "No active Flash model responded")
+
+            data = json.loads(res.text)
+            name = data["cigar_name"]
+            def update_ui():
+                CIGAR_DB[name] = data
+                search_var.set("")
+                refresh_list()
+                select_cigar(name)
+                status_lbl.config(text=f"AI MATCH: {name.upper()}", fg="#00FF00")
+            root.after(0, update_ui)
+        except Exception as e:
+            err = str(e)[:42]
+            root.after(0, lambda: status_lbl.config(text=f"ERR: {err}", fg="#FF5555"))
+    threading.Thread(target=worker, daemon=True).start()
+
+def upload_photo():
     global current_photo
-    file_path = filedialog.askopenfilename(
-        title="Select Cigar or Band Photo",
-        filetypes=(("Image Files", "*.png *.jpg *.jpeg *.webp *.bmp"),)
-    )
-    if not file_path:
-        return
+    fp = filedialog.askopenfilename(filetypes=(("Images", "*.png *.jpg *.jpeg *.heic *.HEIC *.webp"), ("All", "*.*")))
+    if not fp: return
+    img = Image.open(fp)
+    thumb = img.copy()
+    thumb.thumbnail((250, 180))
+    current_photo = ImageTk.PhotoImage(thumb)
+    img_lbl.config(image=current_photo, text="")
+    status_lbl.config(text="AI ANALYZING CIGAR BAND...", fg="#00E6FF")
+    analyze_cigar(img)
 
-    try:
-        img = Image.open(file_path)
-        img.thumbnail((260, 190))
-        current_photo = ImageTk.PhotoImage(img)
-        image_label.config(image=current_photo, text="")
-        
-        filename = os.path.basename(file_path).lower()
-        matched = False
-        for cigar_name in CIGAR_DB:
-            brand_word = next(iter(cigar_name.split())).lower()
-            if brand_word in filename:
-                select_cigar_by_name(cigar_name)
-                scan_status.config(text=f"BAND MATCHED: {cigar_name.upper()}", fg="#00FF00")
-                matched = True
-                break
-        if not matched:
-            scan_status.config(text="IMAGE LOADED - SELECT BLEND BELOW", fg=GOLD_ACCENT)
-    except Exception as e:
-        messagebox.showerror("Image Error", f"Could not load photo:\n{e}")
-
-def filter_cigars(*args):
-    query = search_var.get().lower().strip()
-    cigar_listbox.delete(0, tk.END)
+def refresh_list(*args):
+    q = search_var.get().lower().strip()
+    listbox.delete(0, tk.END)
     for name, info in CIGAR_DB.items():
-        searchable_text = f"{name} {info['brand']} {info['wrapper']} {info['origin']} {info['notes']}".lower()
-        if query in searchable_text:
-            cigar_listbox.insert(tk.END, name)
+        if q in f"{name} {info['brand']} {info['wrapper']} {info['notes']}".lower():
+            listbox.insert(tk.END, name)
 
-def on_list_select(event):
-    selection = cigar_listbox.curselection()
-    if selection:
-        cigar_name = cigar_listbox.get(next(iter(selection)))
-        display_cigar_details(cigar_name)
-
-def select_cigar_by_name(target_name):
-    cigar_listbox.selection_clear(0, tk.END)
-    for idx in range(cigar_listbox.size()):
-        if cigar_listbox.get(idx) == target_name:
-            cigar_listbox.selection_set(idx)
-            cigar_listbox.see(idx)
-            break
-    display_cigar_details(target_name)
-
-def display_cigar_details(name):
+def select_cigar(name):
     info = CIGAR_DB.get(name)
-    if not info:
-        return
-    title_val.config(text=name)
-    origin_val.config(text=f"{info['brand']}  |  Origin: {info['origin']}")
-    wrapper_val.config(text=info["wrapper"])
-    binder_val.config(text=info["binder"])
-    filler_val.config(text=info["filler"])
-    notes_val.config(text=info["notes"])
-    pairing_val.config(text=info["pairing"])
-    
-    strength_bar["value"] = info["strength"]
-    strength_text.config(text=f"{info['strength_label']} ({info['strength']}/100)")
+    if not info: return
+    title_lbl.config(text=name)
+    sub_lbl.config(text=f"{info['brand']}  |  Origin: {info['origin']}")
+    wrap_lbl.config(text=f"Wrapper: {info['wrapper']}  |  Binder: {info['binder']}  |  Filler: {info['filler']}")
+    bar["value"] = info["strength"]
+    str_lbl.config(text=f"Strength: {info['strength_label']} ({info['strength']}/100)")
+    notes_lbl.config(text=f"Notes: {info['notes']}")
+    pair_lbl.config(text=f"Pairing: {info['pairing']}")
 
 root = tk.Tk()
-root.title("Aficionado Lounge - Cigar Scanner & Humidor v1.0")
-root.geometry("920x640")
-root.configure(bg=BG_MAHOGANY)
+root.title("Aficionado AI Cigar Scanner v2.0")
+root.geometry("860x580")
+root.configure(bg=BG)
 
-header_frame = tk.Frame(root, bg=BG_MAHOGANY)
-header_frame.pack(fill="x", padx=25, pady=(18, 10))
+tk.Label(root, text="AFICIONADO AI CIGAR SOMMELIER v2.0", font=("Georgia", 17, "bold"), bg=BG, fg=GOLD).pack(pady=(15, 10))
+main = tk.Frame(root, bg=BG)
+main.pack(fill="both", expand=True, padx=20, pady=10)
 
-tk.Label(
-    header_frame,
-    text="AFICIONADO CIGAR SOMMELIER & SCANNER",
-    font=("Georgia", 18, "bold"),
-    bg=BG_MAHOGANY,
-    fg=GOLD_ACCENT
-).pack()
+left = tk.Frame(main, bg=CARD, padx=15, pady=15, width=290)
+left.pack(side="left", fill="y", padx=(0, 15))
+left.pack_propagate(False)
 
-tk.Label(
-    header_frame,
-    text="DIGITAL HUMIDOR  |  WRAPPER TELEMETRY  |  TASTING PROFILES",
-    font=("Courier", 10),
-    bg=BG_MAHOGANY,
-    fg=MUTED_TAN
-).pack(pady=(2, 0))
+img_lbl = tk.Label(left, text="No Photo Loaded", bg="#120B06", fg=TAN, width=32, height=11)
+img_lbl.pack(pady=5)
+tk.Button(left, text="SCAN CIGAR WITH AI VISION", font=("Courier", 10, "bold"), bg=GOLD, fg=BG, command=upload_photo).pack(fill="x", pady=6)
+status_lbl = tk.Label(left, text="LIVE AI VISION READY", font=("Courier", 9, "bold"), bg=CARD, fg="#00FF00")
+status_lbl.pack(pady=(0, 10))
 
-main_container = tk.Frame(root, bg=BG_MAHOGANY)
-main_container.pack(fill="both", expand=True, padx=25, pady=10)
-
-left_col = tk.Frame(main_container, bg=PANEL_LEATHER, bd=2, relief="ridge", padx=15, pady=15, width=320)
-left_col.pack(side="left", fill="y", padx=(0, 15))
-left_col.pack_propagate(False)
-
-tk.Label(left_col, text="BAND & WRAPPER VIEWER", font=("Courier", 11, "bold"), bg=PANEL_LEATHER, fg=GOLD_ACCENT).pack(pady=(0, 8))
-
-photo_frame = tk.Frame(left_col, bg="#120B06", bd=2, relief="sunken", width=270, height=200)
-photo_frame.pack(pady=5)
-photo_frame.pack_propagate(False)
-
-image_label = tk.Label(
-    photo_frame,
-    text="No Band Photo Loaded\n\nClick Below to Scan\nor Upload Image",
-    font=("Courier", 10),
-    bg="#120B06",
-    fg=MUTED_TAN
-)
-image_label.pack(expand=True)
-
-scan_btn = tk.Button(
-    left_col,
-    text="UPLOAD / SCAN CIGAR PHOTO",
-    font=("Courier", 10, "bold"),
-    bg=GOLD_ACCENT,
-    fg="#1C110A",
-    command=upload_cigar_photo,
-    highlightbackground=PANEL_LEATHER
-)
-scan_btn.pack(fill="x", pady=(8, 4))
-
-scan_status = tk.Label(left_col, text="OFFLINE HUMIDOR READY", font=("Courier", 9, "bold"), bg=PANEL_LEATHER, fg="#00FF00")
-scan_status.pack(pady=(0, 10))
-
-tk.Label(left_col, text="SEARCH BY BRAND, WRAPPER OR NOTE:", font=("Courier", 9, "bold"), bg=PANEL_LEATHER, fg=MUTED_TAN).pack(anchor="w")
 search_var = tk.StringVar()
-search_var.trace_add("write", filter_cigars)
+search_var.trace_add("write", refresh_list)
+tk.Entry(left, textvariable=search_var, bg="#120B06", fg=CREAM, insertbackground=GOLD).pack(fill="x", pady=5)
+listbox = tk.Listbox(left, bg="#120B06", fg=CREAM, selectbackground=GOLD, selectforeground=BG, font=("Georgia", 11))
+listbox.pack(fill="both", expand=True)
+listbox.bind("<<ListboxSelect>>", lambda e: select_cigar(listbox.get(listbox.curselection())) if listbox.curselection() else None)
 
-search_entry = tk.Entry(left_col, textvariable=search_var, font=("Courier", 11), bg="#120B06", fg=CREAM_TEXT, insertbackground=GOLD_ACCENT)
-search_entry.pack(fill="x", pady=(3, 8))
+right = tk.Frame(main, bg=CARD, padx=25, pady=20)
+right.pack(side="right", fill="both", expand=True)
+title_lbl = tk.Label(right, text="", font=("Georgia", 19, "bold"), bg=CARD, fg=GOLD, anchor="w")
+title_lbl.pack(fill="x")
+sub_lbl = tk.Label(right, text="", font=("Courier", 11, "bold"), bg=CARD, fg=TAN, anchor="w")
+sub_lbl.pack(fill="x", pady=(2, 15))
+wrap_lbl = tk.Label(right, text="", font=("Georgia", 12), bg=CARD, fg=CREAM, anchor="w", wraplength=460, justify="left")
+wrap_lbl.pack(fill="x", pady=10)
+bar = ttk.Progressbar(right, length=400, mode="determinate", maximum=100)
+bar.pack(fill="x", pady=(15, 4))
+str_lbl = tk.Label(right, text="", font=("Courier", 10, "bold"), bg=CARD, fg=CREAM, anchor="w")
+str_lbl.pack(fill="x", pady=(0, 15))
+notes_lbl = tk.Label(right, text="", font=("Georgia", 12, "italic"), bg=CARD, fg=CREAM, anchor="w", wraplength=460, justify="left")
+notes_lbl.pack(fill="x", pady=10)
+pair_lbl = tk.Label(right, text="", font=("Georgia", 12), bg=CARD, fg=CREAM, anchor="w", wraplength=460, justify="left")
+pair_lbl.pack(fill="x", pady=10)
 
-cigar_listbox = tk.Listbox(
-    left_col,
-    font=("Georgia", 11),
-    bg="#120B06",
-    fg=CREAM_TEXT,
-    selectbackground=GOLD_ACCENT,
-    selectforeground="#1C110A",
-    bd=0,
-    highlightthickness=1,
-    highlightcolor=GOLD_ACCENT
-)
-cigar_listbox.pack(fill="both", expand=True)
-cigar_listbox.bind("<<ListboxSelect>>", on_list_select)
-
-right_col = tk.Frame(main_container, bg=PANEL_LEATHER, bd=2, relief="ridge", padx=25, pady=20)
-right_col.pack(side="right", fill="both", expand=True)
-
-title_val = tk.Label(right_col, text="", font=("Georgia", 20, "bold"), bg=PANEL_LEATHER, fg=GOLD_ACCENT, anchor="w", wraplength=500, justify="left")
-title_val.pack(fill="x")
-
-origin_val = tk.Label(right_col, text="", font=("Courier", 11, "bold"), bg=PANEL_LEATHER, fg=MUTED_TAN, anchor="w")
-origin_val.pack(fill="x", pady=(2, 12))
-
-ttk.Separator(right_col, orient="horizontal").pack(fill="x", pady=5)
-
-leaf_frame = tk.Frame(right_col, bg=PANEL_LEATHER)
-leaf_frame.pack(fill="x", pady=10)
-
-def add_spec_row(parent, row_idx, label_title):
-    tk.Label(parent, text=label_title, font=("Courier", 11, "bold"), bg=PANEL_LEATHER, fg=GOLD_ACCENT, width=12, anchor="w").grid(row=row_idx, column=0, sticky="w", pady=5)
-    val_lbl = tk.Label(parent, text="", font=("Georgia", 12), bg=PANEL_LEATHER, fg=CREAM_TEXT, anchor="w", wraplength=380, justify="left")
-    val_lbl.grid(row=row_idx, column=1, sticky="w", pady=5)
-    return val_lbl
-
-wrapper_val = add_spec_row(leaf_frame, 0, "WRAPPER:")
-binder_val = add_spec_row(leaf_frame, 1, "BINDER:")
-filler_val = add_spec_row(leaf_frame, 2, "FILLER:")
-
-ttk.Separator(right_col, orient="horizontal").pack(fill="x", pady=10)
-
-tk.Label(right_col, text="BODY & STRENGTH PROFILE:", font=("Courier", 11, "bold"), bg=PANEL_LEATHER, fg=GOLD_ACCENT, anchor="w").pack(fill="x")
-
-style = ttk.Style()
-style.theme_use("default")
-style.configure("Cigar.Horizontal.TProgressbar", background=GOLD_ACCENT, troughcolor="#120B06", thickness=16)
-
-strength_bar = ttk.Progressbar(right_col, style="Cigar.Horizontal.TProgressbar", length=400, mode="determinate", maximum=100)
-strength_bar.pack(fill="x", pady=(6, 2))
-
-strength_text = tk.Label(right_col, text="", font=("Courier", 10, "bold"), bg=PANEL_LEATHER, fg=CREAM_TEXT, anchor="e")
-strength_text.pack(fill="x", pady=(0, 10))
-
-tk.Label(right_col, text="TASTING NOTES & AROMA:", font=("Courier", 11, "bold"), bg=PANEL_LEATHER, fg=GOLD_ACCENT, anchor="w").pack(fill="x", pady=(5, 2))
-notes_val = tk.Label(right_col, text="", font=("Georgia", 12, "italic"), bg=PANEL_LEATHER, fg=CREAM_TEXT, anchor="w", wraplength=500, justify="left")
-notes_val.pack(fill="x", pady=(0, 12))
-
-tk.Label(right_col, text="RECOMMENDED LOUNGE PAIRING:", font=("Courier", 11, "bold"), bg=PANEL_LEATHER, fg=GOLD_ACCENT, anchor="w").pack(fill="x", pady=(5, 2))
-pairing_val = tk.Label(right_col, text="", font=("Georgia", 12), bg=PANEL_LEATHER, fg=CREAM_TEXT, anchor="w", wraplength=500, justify="left")
-pairing_val.pack(fill="x")
-
-filter_cigars()
-select_cigar_by_name("Padron 1964 Anniversary Exclusivo")
-
+refresh_list()
+select_cigar("INCH Nicaragua No. 60")
 root.lift()
-root.attributes("-topmost", True)
-root.after(500, lambda: root.attributes("-topmost", False))
-
 root.mainloop()
