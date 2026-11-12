@@ -24,7 +24,13 @@ st.markdown("""
         margin-top: 15px;
     }
     .gold-label { color: #D4AF37; font-weight: bold; letter-spacing: 1px; font-size: 0.85em; }
-    </style>
+    div.stButton > button {
+    background-color: #D4AF37 !important;
+    color: #1C110A !important;
+    border: none !important;
+    font-weight: bold !important;
+}
+</style>
 """, unsafe_allow_html=True)
 
 class CigarProfile(BaseModel):
@@ -73,7 +79,7 @@ with tab_scan:
                         img_rgb = pil_img.copy().convert("RGB")
                         img_rgb.thumbnail((1024, 1024))
                         res = client.models.generate_content(
-                            model="gemini-2.5-flash",
+                            model="gemini-3.8-flash",
                             contents=[img_rgb, "Identify this exact cigar from its band and wrapper. Provide accurate sommelier details."],
                             config={"response_mime_type": "application/json", "response_schema": CigarProfile},
                         )
