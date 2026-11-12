@@ -1,9 +1,9 @@
 import streamlit as st
-
 from pillow_heif import register_heif_opener
 from PIL import Image
 from google import genai
 from pydantic import BaseModel
+import time
 import json
 import os
 
@@ -24,13 +24,20 @@ st.markdown("""
         margin-top: 15px;
     }
     .gold-label { color: #D4AF37; font-weight: bold; letter-spacing: 1px; font-size: 0.85em; }
-    div.stButton > button {
-    background-color: #D4AF37 !important;
-    color: #1C110A !important;
-    border: none !important;
-    font-weight: bold !important;
-}
-</style>
+    
+    /* Force Primary & Standard Buttons to Gold Lounge Theme */
+    div.stButton > button, button[kind="primary"] {
+        background-color: #D4AF37 !important;
+        color: #1C110A !important;
+        border: 1px solid #F5E6CC !important;
+        font-weight: bold !important;
+        border-radius: 8px !important;
+    }
+    div.stButton > button:hover, button[kind="primary"]:hover {
+        background-color: #E5C158 !important;
+        color: #1C110A !important;
+    }
+    </style>
 """, unsafe_allow_html=True)
 
 class CigarProfile(BaseModel):
@@ -69,7 +76,7 @@ with tab_scan:
         pil_img = Image.open(img_file)
         st.image(pil_img, caption="Uploaded Cigar", use_container_width=True)
 
-        if st.button("✨ Identify Cigar with AI Vision", type="primary", use_container_width=True):
+        if st.button("✨ Identify Cigar with AI Vision", use_container_width=True):
             if not api_key:
                 st.error("Missing GEMINI_API_KEY. Add it in Streamlit App Secrets.")
             else:
@@ -77,17 +84,41 @@ with tab_scan:
                     try:
                         client = genai.Client(api_key=api_key)
                         img_rgb = pil_img.copy().convert("RGB")
-                        img_rgb.thumbnail((1024, 1024))
-                        res = client.models.generate_content(
-                            model="gemini-3.8-flash",
-                            contents=[img_rgb, "Identify this exact cigar from its band and wrapper. Provide accurate sommelier details."],
-                            config={"response_mime_type": "application/json", "response_schema": CigarProfile},
-                        )
+                        img_rgb.thumbnail((800, 800))
+
+                        # Prioritize high-capacity production & lite Flash models to avoid 503 spikes
+                        priority_models = [
+                            "gemini-2.5-flash-lite",
+                            "gemini-2.0-flash",
+                            "gemini-3.8-flash-lite",
+                            "gemini-3.8-flash",
+                            "gemini-2.5-pro"
+                        ]
+
+                        res = None
+                        last_err = ""
+                        for m_name in priority_models:
+                            try:
+                                res = client.models.generate_content(
+                                    model=m_name,
+                                    contents=[img_rgb, "Identify this exact cigar from its band and wrapper. Provide accurate sommelier details."],
+                                    config={"response_mime_type": "application/json", "response_schema": CigarProfile},
+                                )
+                                if res and res.text:
+                                    break
+                            except Exception as inner_e:
+                                last_err = str(inner_e)
+                                time.sleep(1)
+                                continue
+
+                        if not res or not res.text:
+                            raise Exception(last_err or "Servers busy. Please try again in a few seconds.")
+
                         data = json.loads(res.text)
                         name = data["cigar_name"]
                         st.session_state.cigar_db[name] = data
                         st.session_state.selected_cigar = name
-                        st.success(f"Matched: {name}")
+                        st.success(f"✅ Matched: {name} — Switch to the 'Digital Humidor' tab to view full tasting notes!")
                     except Exception as e:
                         st.error(f"Scan error: {e}")
 
