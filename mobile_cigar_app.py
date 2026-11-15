@@ -9,7 +9,7 @@ import os
 
 register_heif_opener()
 
-st.set_page_config(page_title="Aficionado AI Cigar Sommelier", page_icon="🍂", layout="centered")
+st.set_page_config(page_title="Fointein AI Cigar Sommelier", page_icon="🍂", layout="centered")
 
 # --- CUSTOM MAHOGANY & GOLD LOUNGE STYLING ---
 st.markdown("""
@@ -58,7 +58,7 @@ if "cigar_db" not in st.session_state:
         "Ashton Classic Magnum": {"brand": "Ashton", "origin": "Dominican Republic", "wrapper": "Connecticut Shade", "binder": "Dominican", "filler": "Dominican", "strength": 35, "strength_label": "Mild to Medium", "notes": "Silky buttered toast, vanilla bean, light cedar, and creamy cashew.", "pairing": "Morning Latte or Chardonnay"}
     }
 
-st.title("🍂 Aficionado AI Cigar Sommelier")
+st.title("🍂 Fointein AI Cigar Sommelier")
 st.caption("LIVE AI BAND VISION • WRAPPER TELEMETRY • DIGITAL HUMIDOR")
 
 api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
