@@ -58,7 +58,7 @@ if "cigar_db" not in st.session_state:
         "Ashton Classic Magnum": {"brand": "Ashton", "origin": "Dominican Republic", "wrapper": "Connecticut Shade", "binder": "Dominican", "filler": "Dominican", "strength": 35, "strength_label": "Mild to Medium", "notes": "Silky buttered toast, vanilla bean, light cedar, and creamy cashew.", "pairing": "Morning Latte or Chardonnay"}
     }
 
-st.title("🍂 Fointein AI Cigar Sommelier")
+st.markdown('<div style="display:flex;align-items:center;gap:14px;margin-bottom:4px;"><svg width="58" height="58" viewBox="0 0 64 64" fill="none" xmlns="http://w3.org"><rect width="64" height="64" rx="14" fill="#2A1A10" stroke="#D4AF37" stroke-width="2"/><path d="M12 24H34L31 50H15L12 24Z" stroke="#F5E6CC" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 35H32.5L31 49H15L13.5 35Z" fill="#B85D19"/><rect x="18" y="38" width="7" height="7" rx="1" transform="rotate(12 18 38)" fill="#F5E6CC" fill-opacity="0.35"/><g transform="rotate(-28 45 40)"><rect x="28" y="36" width="30" height="8" rx="3" fill="#6E3B1E" stroke="#D4AF37" stroke-width="1.2"/><rect x="37" y="36" width="6" height="8" fill="#D4AF37"/><path d="M56 36.5H58C59.1 36.5 59.1 43.5 58 43.5H56V36.5Z" fill="#FF6B35"/></g><path d="M53 26C51 22 55 19 53 15" stroke="#D4AF37" stroke-width="1.6" stroke-linecap="round"/><path d="M57 24C55.5 21 58.5 18 57 14" stroke="#F5E6CC" stroke-opacity="0.7" stroke-width="1.4" stroke-linecap="round"/></svg><h1 style="margin:0;color:#D4AF37;font-family:Georgia,serif;font-size:2.1rem;">Fointein AI Cigar Sommelier</h1></div>', unsafe_allow_html=True)
 st.caption("LIVE AI BAND VISION • WRAPPER TELEMETRY • DIGITAL HUMIDOR")
 
 api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
