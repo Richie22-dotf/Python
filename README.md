@@ -1,38 +1,41 @@
 # 🎛️ Python Desktop Command Suite & AI Portfolio
 
-A unified collection of custom macOS desktop applications, mobile web tools, and iPadOS utilities built in Python. Features real-time hardware telemetry, local network mapping, live financial market streaming, custom photo flip-clocks, and multimodal AI Vision recognition.
+A unified collection of custom macOS desktop security & telemetry utilities, cross-device Streamlit AI web apps, and iPadOS tools built in Python. Features active subnet vulnerability scanning, real-time hardware & network diagnostics, custom photo flip-clocks, and multimodal Google Gemini Vision applications.
 
 ---
 
 ## 🚀 Applications Included
 
 ### 1. Master Command Hub (`hub.py`)
-* **What it does:** Central multi-process desktop launcher for your entire macOS application suite.
-* **Key features:** Automatically inherits your `GEMINI_API_KEY` from `~/.zshrc`, launches individual modules on demand, or deploys all 5 desktop applications simultaneously in a calculated 3x2 screen grid.
+* **What it does:** Central multi-process desktop launcher for your entire 6-application macOS command suite.
+* **Key features:** Automatically inherits `GEMINI_API_KEY` from `~/.zshrc`, launches individual modules on demand, or deploys all 6 desktop systems simultaneously across a calculated 3x2 screen grid.
 
-### 2. AI Cigar Sommelier — Desktop (`cigar_scanner.py`)
-* **What it does:** Multimodal cigar band scanner and curated digital humidor for macOS.
-* **Key features:** Uses Google Gemini Vision (`google-genai`) and `Pillow` (`HEIC`/`JPG`/`PNG`) to read cigar bands from photos, identify blends, wrappers, strength scores, tasting notes, and drink pairings, and add them to your searchable mahogany-and-gold humidor.
+### 2. CyberGuard AI — Home Vulnerability & Recon Auditor (`cyber_guard.py`)
+* **What it does:** Active home-network attack surface scanner, interactive remediation inspector, and AI Security Analyst console.
+* **Key features:** Sweeps your local Wi-Fi subnet, probes 15 high-risk TCP ports (`Telnet`, `FTP`, `SMB`, `RTSP`, `RDP`, `VNC`, `UPnP/AirPlay`, `HTTP/HTTPS`), provides instant **Click-to-Inspect Remediation** playbooks per host, generates executive **Gemini SOC Analyst** threat briefings, and exports formatted **PDF Security Audit Reports** (`reportlab`).
 
-### 3. AI Cigar Sommelier — Mobile & Web (`mobile_cigar_app.py`)
-* **What it does:** Responsive web application deployed on Streamlit Cloud for iPhone, M4 iPad, and desktop browsers.
-* **Key features:** Supports live mobile camera capture (`st.camera_input`) and photo uploads, dynamically discovers active Gemini Vision models via `client.models.list()`, and saves directly to your iPhone/iPad Home Screen as a full-screen web app.
+### 3. Network Command & Speed Suite v2.1 (`scanner.py`)
+* **What it does:** Real-time local network mapper and internet performance dashboard.
+* **Key features:** Resolves readable device hostnames, maps IP and MAC addresses, identifies hardware manufacturers via OUI lookup, continuously monitors live internet ping (`8.8.8.8`), and runs multi-threaded Download/Upload speed tests (`speedtest-cli`).
 
-### 4. Luxury Photo Flip-Clock & Calendar (`clock.py`)
-* **What it does:** Customizable macOS desktop clock and desk calendar widget with personal photo backdrops.
-* **Key features:** Renders translucent smoked-glass flip-clock tiles, a uniform `AM/PM` + seconds badge, and a gold-topped desk calendar leaf over any personal photo. Includes one-click controls to swap photos (`🖼️ Photo`), cycle 4 corner positions (`📍 Move`) so faces stay unobstructed, and adjust photo brightness (`☀️ Tint`).
+### 4. Fointein AI Cigar Sommelier v2.0 (`mobile_cigar_app.py`)
+* **What it does:** Cross-device multimodal cigar band scanner, digital humidor, and curated drink pairing studio deployed on Streamlit Cloud.
+* **Key features:** Features a custom Cigar & Aged Rum SVG emblem, identifies cigar blends and tasting notes from photos or live camera, builds a **3-tier Sommelier Pairing Flight** (Spirits, Coffee/Tea, Wine/Craft Beer), includes an interactive **Pair My Drink** matcher, and generates shareable tasting cards.
 
-### 5. Global Market Streamer (`streamer.py`)
-* **What it does:** Live multi-asset financial price monitor.
-* **Key features:** Streams real-time prices and directional indicators for Bitcoin, Ethereum, Solana, Tesla (`TSLA`), and Gold using background threading so the interface never freezes.
+### 5. 12 Esthetics AI • Beauty & Ethics Scanner (`beauty_scanner.py`)
+* **What it does:** Multimodal skincare, haircare, and cosmetic ingredient & supply-chain ethics auditor deployed on Streamlit Cloud.
+* **Key features:** Identifies main active and base ingredients from product labels, flags potential irritants, scores formulation cleanliness (`0–100`), audits cruelty-free status and high-risk supply chains (mica, palm oil, squalane), and saves audited items to a **Digital Vanity Shelf**.
 
-### 6. Mac System Commander (`commander.py`)
-* **What it does:** Live macOS hardware telemetry dashboard.
-* **Key features:** Monitors real-time CPU load, RAM memory usage, and SSD disk capacity using `psutil`.
+### 6. AI Cigar Sommelier — macOS Desktop (`cigar_scanner.py`)
+* **What it does:** Native macOS desktop cigar band scanner and digital humidor integrated into the Master Command Hub.
+* **Key features:** Uses `google-genai` and `Pillow` (`HEIC`/`JPG`/`PNG`) to analyze cigar bands and catalog blends locally.
 
-### 7. Network Device Scanner (`scanner.py`)
-* **What it does:** Local Wi-Fi subnet scanner and device mapper.
-* **Key features:** Scans your local network to map connected IP addresses and active devices.
+### 7. Luxury Photo Flip-Clock & Calendar (`clock.py`)
+* **What it does:** Customizable macOS desktop flip-clock and desk calendar widget over personal photography.
+* **Key features:** Translucent smoked-glass flip tiles, uniform `AM/PM` and seconds badge, gold-topped desk calendar leaf, one-click photo switcher, 4 corner positions, and brightness controls.
+
+### 8. Global Market Streamer (`streamer.py`) & Mac System Commander (`commander.py`)
+* **What they do:** Live financial market ticker (`BTC`, `ETH`, `SOL`, `TSLA`, `Gold`) and real-time macOS hardware telemetry (`CPU`, `RAM`, `Disk` via `psutil`).
 
 ---
 
@@ -42,10 +45,10 @@ A unified collection of custom macOS desktop applications, mobile web tools, and
    git clone https://github.com && cd Python
 
 2. **Install required dependencies:**
-   python3 -m pip install pillow pillow-heif google-genai pydantic yfinance psutil requests streamlit
+   python3 -m pip install pillow pillow-heif google-genai pydantic yfinance psutil requests streamlit speedtest-cli reportlab
 
 3. **Set your Google Gemini API key:**
    export GEMINI_API_KEY="your_api_key_here"
 
-4. **Launch the Master Command Hub:**
+4. **Launch the 6-System Master Command Hub:**
    python3 hub.py
