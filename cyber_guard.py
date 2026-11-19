@@ -1,9 +1,12 @@
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, filedialog, messagebox
 import subprocess
 import threading
 import socket
 import json
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+import time
 import re
 import os
 import sys
@@ -14,21 +17,21 @@ except ImportError:
     genai = None
 
 RISK_PORTS = {
-    21: ("FTP", "HIGH", "Unencrypted file transfer; credentials sent in plaintext."),
-    22: ("SSH", "LOW", "Encrypted remote shell; verify key-only auth & disable root login."),
-    23: ("Telnet", "CRITICAL", "Legacy unencrypted remote shell; severe takeover risk."),
-    53: ("DNS", "LOW", "Local DNS resolver service."),
-    80: ("HTTP", "MEDIUM", "Unencrypted web admin panel; check for default credentials."),
-    139: ("NetBIOS", "MEDIUM", "Legacy Windows/SMB file sharing exposure."),
-    443: ("HTTPS", "LOW", "Encrypted web interface."),
-    445: ("SMB", "HIGH", "File sharing protocol; common target for lateral movement."),
-    554: ("RTSP", "HIGH", "IP camera video stream; verify strong password & LAN isolation."),
-    1883: ("MQTT", "MEDIUM", "Smart-home IoT broker; check for unauthenticated access."),
-    3389: ("RDP", "CRITICAL", "Remote Desktop exposed; high risk if accessible outside LAN."),
-    5000: ("UPnP/Flask", "MEDIUM", "UPnP service or dev server; disable UPnP on router if unused."),
-    5900: ("VNC", "HIGH", "Remote screen sharing; enforce strong authentication."),
-    8080: ("HTTP-Alt", "MEDIUM", "Alternative web admin portal or proxy."),
-    8443: ("HTTPS-Alt", "LOW", "Encrypted alternative management port.")
+    21: ("FTP", "HIGH", "Unencrypted file transfer; credentials sent in plaintext.", "Disable FTP on the device/router and switch to SFTP (port 22) or FTPS."),
+    22: ("SSH", "LOW", "Encrypted remote shell access.", "Ensure password login is disabled (use SSH keys only) and disable root SSH login."),
+    23: ("Telnet", "CRITICAL", "Legacy unencrypted remote shell; severe takeover risk.", "Immediately disable Telnet in device/router admin settings and use SSH instead."),
+    53: ("DNS", "LOW", "Local DNS resolver service.", "Verify DNS recursion is restricted to local LAN clients only (no WAN exposure)."),
+    80: ("HTTP", "MEDIUM", "Unencrypted web admin panel.", "Change default admin credentials, use HTTPS if available, and disable WAN/Remote Management."),
+    139: ("NetBIOS", "MEDIUM", "Legacy Windows/SMB name and file sharing service.", "Disable NetBIOS over TCP/IP unless required for legacy local printers/shares."),
+    443: ("HTTPS", "LOW", "Encrypted web management interface.", "Confirm strong admin password and ensure remote WAN access is turned off."),
+    445: ("SMB", "HIGH", "Network file sharing protocol; target for lateral movement.", "On macOS: System Settings > General > Sharing > turn OFF File Sharing if unused."),
+    554: ("RTSP", "HIGH", "Live IP camera video stream.", "Set a strong unique camera password, update firmware, and isolate camera on IoT Wi-Fi."),
+    1883: ("MQTT", "MEDIUM", "Smart-home IoT messaging broker.", "Enable username/password auth and TLS on broker; isolate IoT devices from main LAN."),
+    3389: ("RDP", "CRITICAL", "Remote Desktop exposed on LAN.", "Enable Network Level Authentication (NLA), enforce strong passwords, and never port-forward 3389."),
+    5000: ("UPnP/AirPlay", "MEDIUM", "UPnP service or macOS AirPlay Receiver.", "On Mac: System Settings > General > AirDrop & Handoff > set AirPlay Receiver to Current User. Disable UPnP on router."),
+    5900: ("VNC", "HIGH", "Remote screen sharing service.", "Turn off Screen Sharing / Remote Management when not actively needed and require strong auth."),
+    8080: ("HTTP-Alt", "MEDIUM", "Alternative web admin portal or proxy.", "Inspect http://<IP>:8080 in browser, change default login, and restrict to LAN only."),
+    8443: ("HTTPS-Alt", "LOW", "Encrypted alternative management portal.", "Verify strong admin credentials and keep device firmware up to date.")
 }
 
 OUI_VENDORS = {
@@ -82,21 +85,23 @@ def resolve_name(ip, vendor, my_ip, arp_host=""):
 
 def probe_ports(ip):
     open_services = []
+    open_nums = []
     highest = "SECURE"
     rank = {"SECURE": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
-    for port, (svc, sev, _) in RISK_PORTS.items():
+    for port, (svc, sev, _, _) in RISK_PORTS.items():
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(0.18)
         if sock.connect_ex((ip, port)) == 0:
             open_services.append(f"{port}/{svc}")
+            open_nums.append(port)
             if rank.get(sev, 0) > rank.get(highest, 0):
                 highest = sev
         sock.close()
-    return open_services, highest
+    return open_services, open_nums, highest
 
 root = tk.Tk()
-root.title("CyberGuard AI • Home Vulnerability & Recon Auditor")
-root.geometry("980x680")
+root.title("CyberGuard AI v2.0 • Interactive Vulnerability & Remediation Suite")
+root.geometry("1020x710")
 if len(sys.argv) > 1:
     root.geometry(sys.argv.pop())
 root.configure(bg="#090D12")
@@ -111,11 +116,11 @@ TEXT = "#E6EDF3"
 MUTED = "#8B949E"
 
 local_ip = get_local_ip()
-scanned_inventory = []
+scanned_inventory = {}
 
 hdr = tk.Frame(root, bg=BG)
 hdr.pack(fill="x", padx=20, pady=(14, 6))
-tk.Label(hdr, text="CYBERGUARD AI • HOME VULNERABILITY AUDITOR", font=("Courier", 16, "bold"), bg=BG, fg=GREEN).pack(side="left")
+tk.Label(hdr, text="CYBERGUARD AI v2.0 • VULNERABILITY & REMEDIATION SUITE", font=("Courier", 15, "bold"), bg=BG, fg=GREEN).pack(side="left")
 tk.Label(hdr, text=f"SENSOR IP: {local_ip}", font=("Courier", 11, "bold"), bg=BG, fg=CYAN).pack(side="right")
 
 kpi_frame = tk.Frame(root, bg=BG)
@@ -136,8 +141,87 @@ posture_kpi = make_kpi(kpi_frame, "NETWORK POSTURE", "PENDING SCAN", GREEN)
 
 bar = tk.Frame(root, bg=BG)
 bar.pack(fill="x", padx=20, pady=8)
-status_lbl = tk.Label(bar, text="STATUS: READY TO AUDIT ATTACK SURFACE", font=("Courier", 10, "bold"), bg=BG, fg=AMBER)
+status_lbl = tk.Label(bar, text="STATUS: READY — CLICK ANY HOST ROW FOR INSTANT REMEDIATION", font=("Courier", 10, "bold"), bg=BG, fg=AMBER)
 status_lbl.pack(side="left")
+
+def export_report():
+    content = ai_box.get("1.0", tk.END).strip()
+    if not scanned_inventory:
+        messagebox.showinfo("Export Report", "Run an Attack Surface Scan first before exporting a PDF report.")
+        return
+    default_name = f"CyberGuard_Audit_{time.strftime(chr(37)+chr(89)+chr(37)+chr(109)+chr(37)+chr(100))}.pdf"
+    fp = filedialog.asksaveasfilename(
+        title="Save PDF Security Audit Report",
+        initialfile=default_name,
+        defaultextension=".pdf",
+        filetypes=(("PDF Document", "*.pdf"),)
+    )
+    if not fp:
+        return
+
+    c = canvas.Canvas(fp, pagesize=letter)
+    w, h = letter
+    y = h - 50
+
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(45, y, "CyberGuard AI — Home Network Security Audit Report")
+    y -= 20
+    c.setFont("Helvetica", 10)
+    c.drawString(45, y, f"Generated: {time.strftime(chr(37)+chr(89)+chr(45)+chr(37)+chr(109)+chr(45)+chr(37)+chr(100)+chr(32)+chr(37)+chr(72)+chr(58)+chr(37)+chr(77))}  |  Sensor IP: {local_ip}  |  Hosts Scanned: {len(scanned_inventory)}")
+    y -= 28
+
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(45, y, "1. Discovered Network Inventory")
+    y -= 18
+    c.setFont("Courier-Bold", 9)
+    c.drawString(45, y, f"{chr(82)+chr(73)+chr(83)+chr(75):<10} {chr(72)+chr(79)+chr(83)+chr(84):<24} {chr(73)+chr(80):<16} {chr(79)+chr(80)+chr(69)+chr(78)+chr(32)+chr(80)+chr(79)+chr(82)+chr(84)+chr(83)}")
+    y -= 14
+
+    c.setFont("Courier", 8.5)
+    for ip, d in scanned_inventory.items():
+        if y < 60:
+            c.showPage()
+            y = h - 50
+            c.setFont("Courier", 8.5)
+        risk = str(d.get("risk", "SECURE"))
+        name = str(d.get("name", ""))[:22]
+        p_str = ", ".join(d.get("ports", [])) or "None (Filtered)"
+        c.drawString(45, y, f"{risk:<10} {name:<24} {ip:<16} {p_str[:38]}")
+        y -= 13
+
+    y -= 18
+    if y < 90:
+        c.showPage()
+        y = h - 50
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(45, y, "2. Security Analyst Assessment & Remediation Playbook")
+    y -= 18
+
+    c.setFont("Helvetica", 9.5)
+    for raw_line in content.splitlines():
+        words = raw_line.split(" ") if raw_line.strip() else [""]
+        line_buf = ""
+        for word in words:
+            test = (line_buf + " " + word).strip()
+            if len(test) > 92:
+                if y < 55:
+                    c.showPage()
+                    y = h - 50
+                    c.setFont("Helvetica", 9.5)
+                c.drawString(45, y, line_buf)
+                y -= 13
+                line_buf = word
+            else:
+                line_buf = test
+        if y < 55:
+            c.showPage()
+            y = h - 50
+            c.setFont("Helvetica", 9.5)
+        c.drawString(45, y, line_buf)
+        y -= 13
+
+    c.save()
+    status_lbl.config(text=f"STATUS: EXPORTED PDF REPORT TO {os.path.basename(fp)}", fg=GREEN)
 
 def run_full_audit():
     btn_audit.config(state="disabled")
@@ -167,9 +251,9 @@ def run_full_audit():
             def scan_host(ip, mac, ah):
                 vendor = get_vendor(mac)
                 name = resolve_name(ip, vendor, local_ip, ah)
-                ports, sev = probe_ports(ip)
+                ports, port_nums, sev = probe_ports(ip)
                 with lock:
-                    results.append({"name": name, "ip": ip, "mac": mac, "vendor": vendor, "ports": ports, "risk": sev})
+                    results.append({"name": name, "ip": ip, "mac": mac, "vendor": vendor, "ports": ports, "port_nums": port_nums, "risk": sev})
 
             threads = [threading.Thread(target=scan_host, args=item) for item in raw]
             for t in threads: t.start()
@@ -179,20 +263,21 @@ def run_full_audit():
 
             def update_ui():
                 scanned_inventory.clear()
-                scanned_inventory.extend(results)
                 for r in tree.get_children():
                     tree.delete(r)
 
                 total_ports = 0
                 high_risk_hosts = 0
                 for d in results:
+                    ip = d.get("ip")
+                    scanned_inventory.update({ip: d})
                     plist = d.get("ports", [])
                     total_ports += len(plist)
                     risk = d.get("risk", "SECURE")
                     if risk in ("HIGH", "CRITICAL"):
                         high_risk_hosts += 1
                     p_str = ", ".join(plist) if plist else "None (Filtered)"
-                    tree.insert("", "end", values=(risk, d.get("name"), d.get("ip"), d.get("vendor"), p_str))
+                    tree.insert("", "end", iid=ip, values=(risk, d.get("name"), ip, d.get("vendor"), p_str))
 
                 hosts_kpi.config(text=str(len(results)))
                 ports_kpi.config(text=str(total_ports))
@@ -204,7 +289,7 @@ def run_full_audit():
                 else:
                     posture_kpi.config(text="HARDENED", fg=GREEN)
 
-                status_lbl.config(text=f"STATUS: AUDIT COMPLETE — {len(results)} HOSTS PROBED", fg=GREEN)
+                status_lbl.config(text=f"STATUS: {len(results)} HOSTS PROBED — CLICK ANY ROW TO INSPECT REMEDIATION", fg=GREEN)
                 btn_audit.config(state="normal")
                 btn_ai.config(state="normal")
 
@@ -214,6 +299,43 @@ def run_full_audit():
             root.after(0, lambda: (status_lbl.config(text=f"AUDIT ERR: {err}", fg=RED), btn_audit.config(state="normal")))
 
     threading.Thread(target=worker, daemon=True).start()
+
+def on_row_select(event):
+    sel = tree.selection()
+    if not sel:
+        return
+    ip = next(iter(sel))
+    host = scanned_inventory.get(ip)
+    if not host:
+        return
+
+    name = host.get("name", ip)
+    mac = host.get("mac", "")
+    vendor = host.get("vendor", "")
+    risk = host.get("risk", "SECURE")
+    port_nums = host.get("port_nums", [])
+
+    console_hdr.config(text=f"TARGET INSPECTOR • {name} ({ip}) [{risk}]", fg=CYAN)
+    ai_box.delete("1.0", tk.END)
+    ai_box.insert(tk.END, "=== HOST TELEMETRY & REMEDIATION PLAYBOOK ===\n")
+    ai_box.insert(tk.END, f"Host: {name}  |  IP: {ip}  |  MAC: {mac}  |  Vendor: {vendor}\n")
+    ai_box.insert(tk.END, f"Overall Risk Rating: {risk}\n")
+    ai_box.insert(tk.END, "-" * 68 + "\n\n")
+
+    if not port_nums:
+        ai_box.insert(tk.END, "✅ STATUS: STEALTH / FILTERED\n")
+        ai_box.insert(tk.END, "No high-risk TCP ports responded on this endpoint. Its host firewall is properly dropping unsolicited probes.\n\n")
+        if any(k in vendor for k in ("IoT", "Roku", "Sonos", "Google", "Amazon", "Philips")):
+            ai_box.insert(tk.END, "💡 IOT SEGMENTATION TIP:\nEven with closed ports, smart-home devices should be placed on an isolated secondary IoT Wi-Fi router with Client Isolation enabled so they cannot reach your Mac or iPad.\n")
+        return
+
+    for p in port_nums:
+        svc, sev, desc, fix = RISK_PORTS.get(p, ("Service", "MEDIUM", "Open network port.", "Restrict access via firewall."))
+        ai_box.insert(tk.END, f"🚨 PORT {p} ({svc}) — SEVERITY: {sev}\n")
+        ai_box.insert(tk.END, f"   • Why It Matters: {desc}\n")
+        ai_box.insert(tk.END, f"   • How To Remediate: {fix}\n\n")
+
+    ai_box.insert(tk.END, "👉 Want a deep-dive AI assessment for your entire network? Click [AI FULL NETWORK BRIEFING] above.\n")
 
 def generate_ai_briefing():
     if not scanned_inventory:
@@ -225,6 +347,7 @@ def generate_ai_briefing():
         return
 
     btn_ai.config(state="disabled")
+    console_hdr.config(text="GEMINI SOC ANALYST • FULL NETWORK THREAT BRIEFING", fg=AMBER)
     status_lbl.config(text="STATUS: GEMINI SOC ANALYST GENERATING THREAT BRIEFING...", fg=CYAN)
     ai_box.delete("1.0", tk.END)
     ai_box.insert(tk.END, "Analyzing discovered hosts, open ports, and IoT attack surface...\n")
@@ -232,15 +355,15 @@ def generate_ai_briefing():
     def worker():
         try:
             client = genai.Client(api_key=api_key)
-            summary_json = json.dumps(scanned_inventory, indent=2)
+            summary_json = json.dumps(list(scanned_inventory.values()), indent=2)
             prompt = (
-                "You are a Senior Cybersecurity Analyst auditing a home network. "
+                "You are a Senior Cybersecurity & Vulnerability Management Analyst auditing a home network. "
                 "Review this live subnet recon scan (hosts, vendors, open ports, and risk levels):\n\n"
                 f"{summary_json}\n\n"
-                "Provide a concise Security Assessment:\n"
+                "Provide a concise, high-impact Security Assessment:\n"
                 "1) OVERALL ATTACK SURFACE SUMMARY (2-3 sentences)\n"
-                "2) SPECIFIC VULNERABILITY FINDINGS (explain any open ports like 21, 23, 80, 445, 554, 1883, 3389, 5000, 8080)\n"
-                "3) TOP 4 ACTIONABLE HARDENING STEPS (router settings, IoT isolation, firewall rules, UPnP lockdown)."
+                "2) SPECIFIC VULNERABILITY FINDINGS (explain why any open ports matter on those specific devices)\n"
+                "3) TOP 4 ACTIONABLE HARDENING STEPS (router settings, IoT segmentation, firewall rules, UPnP lockdown)."
             )
             live_models = [
                 m.name.replace("models/", "") for m in client.models.list()
@@ -262,7 +385,7 @@ def generate_ai_briefing():
             def show_report():
                 ai_box.delete("1.0", tk.END)
                 ai_box.insert(tk.END, report)
-                status_lbl.config(text="STATUS: AI THREAT & HARDENING BRIEFING READY", fg=GREEN)
+                status_lbl.config(text="STATUS: AI FULL NETWORK BRIEFING READY", fg=GREEN)
                 btn_ai.config(state="normal")
             root.after(0, show_report)
         except Exception as e:
@@ -271,7 +394,10 @@ def generate_ai_briefing():
 
     threading.Thread(target=worker, daemon=True).start()
 
-btn_ai = tk.Button(bar, text="AI VULNERABILITY BRIEFING", font=("Courier", 10, "bold"), bg="#1F2937", fg=AMBER, command=generate_ai_briefing, padx=10, pady=4, state="disabled")
+btn_export = tk.Button(bar, text="EXPORT REPORT (.PDF)", font=("Courier", 10, "bold"), bg="#1F2937", fg=CYAN, command=export_report, padx=10, pady=4)
+btn_export.pack(side="right", padx=(6, 0))
+
+btn_ai = tk.Button(bar, text="AI FULL NETWORK BRIEFING", font=("Courier", 10, "bold"), bg="#1F2937", fg=AMBER, command=generate_ai_briefing, padx=10, pady=4, state="disabled")
 btn_ai.pack(side="right", padx=(6, 0))
 
 btn_audit = tk.Button(bar, text="RUN ATTACK SURFACE SCAN", font=("Courier", 10, "bold"), bg="#1F2937", fg=GREEN, command=run_full_audit, padx=10, pady=4)
@@ -282,7 +408,7 @@ tbl_frame.pack(fill="both", expand=True, padx=20, pady=(0, 8))
 
 style = ttk.Style()
 style.theme_use("default")
-style.configure("Treeview", background="#0D1219", foreground=TEXT, fieldbackground="#0D1219", rowheight=24, font=("Courier", 10))
+style.configure("Treeview", background="#0D1219", foreground=TEXT, fieldbackground="#0D1219", rowheight=25, font=("Courier", 10))
 style.configure("Treeview.Heading", background="#1C2430", foreground=CYAN, font=("Courier", 10, "bold"))
 style.map("Treeview", background=[("selected", "#1F6FEB")])
 
@@ -295,22 +421,24 @@ tree.heading("vendor", text="VENDOR")
 tree.heading("ports", text="OPEN PORTS & SERVICES")
 
 tree.column("risk", width=95, anchor="center")
-tree.column("name", width=220, anchor="w")
+tree.column("name", width=230, anchor="w")
 tree.column("ip", width=130, anchor="w")
-tree.column("vendor", width=180, anchor="w")
-tree.column("ports", width=280, anchor="w")
+tree.column("vendor", width=190, anchor="w")
+tree.column("ports", width=290, anchor="w")
+
+tree.bind("<<TreeviewSelect>>", on_row_select)
 
 sb = ttk.Scrollbar(tbl_frame, orient="vertical", command=tree.yview)
 tree.configure(yscrollcommand=sb.set)
 tree.pack(side="left", fill="both", expand=True)
 sb.pack(side="right", fill="y")
 
-ai_hdr = tk.Label(root, text="GEMINI SOC ANALYST • THREAT & HARDENING PLAYBOOK", font=("Courier", 10, "bold"), bg=BG, fg=AMBER)
-ai_hdr.pack(anchor="w", padx=20, pady=(2, 2))
+console_hdr = tk.Label(root, text="REMEDIATION INSPECTOR & SOC CONSOLE (CLICK ANY DEVICE ABOVE)", font=("Courier", 10, "bold"), bg=BG, fg=AMBER)
+console_hdr.pack(anchor="w", padx=20, pady=(2, 2))
 
 ai_box = scrolledtext.ScrolledText(root, height=11, bg="#0D1219", fg="#D1FAE5", font=("Courier", 10), bd=1, relief="groove", wrap=tk.WORD)
 ai_box.pack(fill="both", expand=True, padx=20, pady=(0, 14))
-ai_box.insert(tk.END, "Run an Attack Surface Scan above, then click [AI VULNERABILITY BRIEFING] for a tailored defensive report.\n")
+ai_box.insert(tk.END, "1. Wait for the Attack Surface Scan to complete.\n2. Click ANY device row in the table above to inspect its exact port risks and remediation steps.\n3. Or click [AI FULL NETWORK BRIEFING] for an executive Gemini security assessment.\n")
 
 root.after(400, run_full_audit)
 root.mainloop()
