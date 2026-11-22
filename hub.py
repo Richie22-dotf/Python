@@ -30,7 +30,10 @@ def launch_module(script_name, friendly_name, geometry_arg=None):
         cmd = [sys.executable, script_path]
         if geometry_arg:
             cmd.append(geometry_arg)
-        subprocess.Popen(cmd, cwd=BASE_DIR, env=get_env_with_api_key())
+        if "mobile_cigar_app.py" in repr(list(locals().values())):
+            subprocess.Popen(["/usr/local/bin/python3", "-m", "streamlit", "run", "/Users/richardlung/Documents/Python/mobile_cigar_app.py"], env=os.environ.copy())
+        else:
+            subprocess.Popen(cmd, cwd=BASE_DIR, env=get_env_with_api_key())
         status_label.config(text=f"STATUS: DEPLOYED {friendly_name.upper()} 🚀", fg="#00FF00")
     except Exception as e:
         messagebox.showerror("Launch Failure", f"Failed to launch {friendly_name}:\n{e}")
