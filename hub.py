@@ -98,7 +98,7 @@ create_launch_btn(hub_frame, "🕒 DIGITAL CLOCK", "Date & Time Widget", "#58A6F
 create_launch_btn(hub_frame, "🛡️ NETWORK SCANNER", "Wi-Fi Device Mapper", "#00FF00", "scanner.py")
 create_launch_btn(hub_frame, "🕹️ MAC COMMANDER", "CPU, RAM & SSD Stats", "#00E6FF", "commander.py")
 create_launch_btn(hub_frame, "📈 MARKET STREAMER", "Crypto, TSLA & Gold", "#FFD700", "streamer.py")
-create_launch_btn(hub_frame, "🍂 CIGAR SOMMELIER", "AI Band Vision & Humidor", "#D4AF37", "cigar_scanner.py")
+create_launch_btn(hub_frame, "🍂 FOINTEIN SOMMELIER v2.0", "AI Band Vision & Humidor", "#D4AF37", "cigar_scanner.py")
 create_launch_btn(hub_frame, "🛡️ CYBERGUARD AI", "Home Vulnerability & Port Auditor", "#00FF66", "cyber_guard.py")
 create_launch_btn(hub_frame, "JARVIS v2.1", "Gemini Audio Voice Desk Console", "#00E6FF", "jarvis_desk.py")
 

@@ -1,161 +1,153 @@
-from pillow_heif import register_heif_opener
-register_heif_opener()
-
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import filedialog, scrolledtext
 from PIL import Image, ImageTk
+from pillow_heif import register_heif_opener
 from google import genai
 from pydantic import BaseModel
-import threading, json, os
+from typing import List
+import threading, json, time, sys, os
 
-class CigarProfile(BaseModel):
-    cigar_name: str
-    brand: str
-    origin: str
-    wrapper: str
-    binder: str
-    filler: str
-    strength: int
-    strength_label: str
-    notes: str
-    pairing: str
+register_heif_opener()
 
-CIGAR_DB = {
-    "INCH Nicaragua No. 60": {"brand": "E.P. Carrillo", "origin": "Nicaragua", "wrapper": "Nicaraguan Habano", "binder": "Nicaraguan", "filler": "Nicaraguan", "strength": 85, "strength_label": "Medium-Full", "notes": "Bold black pepper, dark espresso, rich leather, and toasted cedar.", "pairing": "Bourbon or Double Espresso"},
-    "New World by AJ Fernandez": {"brand": "AJ Fernandez", "origin": "Nicaragua", "wrapper": "Nicaraguan Oscuro", "binder": "Nicaraguan", "filler": "Nicaraguan", "strength": 88, "strength_label": "Full-Bodied", "notes": "Dark cocoa, roasted coffee, rich earth, and signature AJ pepper.", "pairing": "Single Malt Scotch or Espresso"},
-    "Ashton VSG Sorcerer": {"brand": "Ashton", "origin": "Dominican Republic", "wrapper": "Ecuadorian Sumatra", "binder": "Dominican", "filler": "Dominican", "strength": 90, "strength_label": "Full-Bodied", "notes": "Rich cedar, espresso, dark chocolate, leather, and bold spice.", "pairing": "XO Cognac or Neat Bourbon"},
-    "Drew Estate Undercrown Maduro": {"brand": "Drew Estate", "origin": "Nicaragua", "wrapper": "Mexican San Andres", "binder": "Connecticut", "filler": "Brazilian & Nicaraguan", "strength": 78, "strength_label": "Medium-Full", "notes": "Velvety dark chocolate, sweet espresso, earth, and black pepper.", "pairing": "Porter Beer or Cappuccino"},
-    "Ashton Classic Magnum": {"brand": "Ashton", "origin": "Dominican Republic", "wrapper": "Connecticut Shade", "binder": "Dominican", "filler": "Dominican", "strength": 35, "strength_label": "Mild to Medium", "notes": "Silky buttered toast, vanilla bean, light cedar, and cashew.", "pairing": "Morning Latte or Chardonnay"}
-}
-
-BG, CARD, GOLD, CREAM, TAN = "#1C110A", "#2A1A10", "#D4AF37", "#F5E6CC", "#B89F82"
-current_photo = None
-
-def analyze_cigar(pil_img):
-    def worker():
-        try:
-            key = os.environ.get("GEMINI_API_KEY")
-            if not key:
-                root.after(0, lambda: status_lbl.config(text="MISSING GEMINI_API_KEY", fg="#FF5555"))
-                return
-            client = genai.Client(api_key=key)
-            img_rgb = pil_img.copy().convert("RGB")
-            img_rgb.thumbnail((800, 800))
-
-            candidates = [
-                m.name.replace("models/", "") for m in client.models.list()
-                if "flash" in m.name.lower() and not any(x in m.name.lower() for x in ["audio", "tts", "lite", "8b"])
-            ]
-            if not candidates:
-                candidates = ["gemini-2.5-flash", "gemini-2.0-flash"]
-
-            res = None
-            last_err = ""
-            for m_name in candidates:
-                try:
-                    root.after(0, lambda m=m_name: status_lbl.config(text=f"SCANNING VIA {m}...", fg="#00E6FF"))
-                    res = client.models.generate_content(
-                        model=m_name,
-                        contents=[img_rgb, "Identify this cigar from its band and wrapper. Provide accurate sommelier details."],
-                        config={"response_mime_type": "application/json", "response_schema": CigarProfile},
-                    )
-                    if res and res.text:
-                        break
-                except Exception as inner_e:
-                    last_err = str(inner_e)[:42]
-                    continue
-
-            if not res or not res.text:
-                raise Exception(last_err or "No active Flash model responded")
-
-            data = json.loads(res.text)
-            name = data["cigar_name"]
-            def update_ui():
-                CIGAR_DB[name] = data
-                search_var.set("")
-                refresh_list()
-                select_cigar(name)
-                status_lbl.config(text=f"AI MATCH: {name.upper()}", fg="#00FF00")
-            root.after(0, update_ui)
-        except Exception as e:
-            err = str(e)[:42]
-            root.after(0, lambda: status_lbl.config(text=f"ERR: {err}", fg="#FF5555"))
-    threading.Thread(target=worker, daemon=True).start()
-
-def upload_photo():
-    global current_photo
-    fp = filedialog.askopenfilename(filetypes=(("Images", "*.png *.jpg *.jpeg *.heic *.HEIC *.webp"), ("All", "*.*")))
-    if not fp: return
-    img = Image.open(fp)
-    thumb = img.copy()
-    thumb.thumbnail((250, 180))
-    current_photo = ImageTk.PhotoImage(thumb)
-    img_lbl.config(image=current_photo, text="")
-    status_lbl.config(text="AI ANALYZING CIGAR BAND...", fg="#00E6FF")
-    analyze_cigar(img)
-
-def refresh_list(*args):
-    q = search_var.get().lower().strip()
-    listbox.delete(0, tk.END)
-    for name, info in CIGAR_DB.items():
-        if q in f"{name} {info['brand']} {info['wrapper']} {info['notes']}".lower():
-            listbox.insert(tk.END, name)
-
-def select_cigar(name):
-    info = CIGAR_DB.get(name)
-    if not info: return
-    title_lbl.config(text=name)
-    sub_lbl.config(text=f"{info['brand']}  |  Origin: {info['origin']}")
-    wrap_lbl.config(text=f"Wrapper: {info['wrapper']}  |  Binder: {info['binder']}  |  Filler: {info['filler']}")
-    bar["value"] = info["strength"]
-    str_lbl.config(text=f"Strength: {info['strength_label']} ({info['strength']}/100)")
-    notes_lbl.config(text=f"Notes: {info['notes']}")
-    pair_lbl.config(text=f"Pairing: {info['pairing']}")
+class DesktopCigarProfile(BaseModel):
+    brand_and_line: str
+    origin_and_wrapper: str
+    strength: str
+    tasting_notes: List[str]
+    spirits_pairing: str
+    coffee_tea_pairing: str
+    wine_beer_pairing: str
+    sommelier_verdict: str
 
 root = tk.Tk()
-root.title("Aficionado AI Cigar Scanner v2.0")
-root.geometry("860x580")
-root.configure(bg=BG)
+root.title("Fointein AI Cigar Sommelier v2.0 - Desktop Studio")
+root.geometry("820x660")
+if len(sys.argv) > 1:
+    root.geometry(sys.argv.pop())
+root.configure(bg="#120C08")
 
-tk.Label(root, text="AFICIONADO AI CIGAR SOMMELIER v2.0", font=("Georgia", 17, "bold"), bg=BG, fg=GOLD).pack(pady=(15, 10))
-main = tk.Frame(root, bg=BG)
-main.pack(fill="both", expand=True, padx=20, pady=10)
+BG, CARD, GOLD, CREAM, AMBER, GREEN = "#120C08", "#1E140E", "#D4AF37", "#F5E6CC", "#E67E22", "#2ECC71"
+selected_path = {"path": None}
+last_profile = {}
 
-left = tk.Frame(main, bg=CARD, padx=15, pady=15, width=290)
-left.pack(side="left", fill="y", padx=(0, 15))
-left.pack_propagate(False)
+hdr = tk.Frame(root, bg=BG)
+hdr.pack(fill="x", padx=20, pady=(14, 6))
+tk.Label(hdr, text="FOINTEIN AI CIGAR SOMMELIER v2.0", font=("Georgia", 16, "bold"), bg=BG, fg=GOLD).pack(side="left")
+status_lbl = tk.Label(hdr, text="READY FOR BAND SCAN", font=("Courier", 10, "bold"), bg=BG, fg=CREAM)
+status_lbl.pack(side="right")
 
-img_lbl = tk.Label(left, text="No Photo Loaded", bg="#120B06", fg=TAN, width=32, height=11)
-img_lbl.pack(pady=5)
-tk.Button(left, text="SCAN CIGAR WITH AI VISION", font=("Courier", 10, "bold"), bg=GOLD, fg=BG, command=upload_photo).pack(fill="x", pady=6)
-status_lbl = tk.Label(left, text="LIVE AI VISION READY", font=("Courier", 9, "bold"), bg=CARD, fg="#00FF00")
-status_lbl.pack(pady=(0, 10))
+top = tk.Frame(root, bg=BG)
+top.pack(fill="x", padx=20, pady=6)
 
-search_var = tk.StringVar()
-search_var.trace_add("write", refresh_list)
-tk.Entry(left, textvariable=search_var, bg="#120B06", fg=CREAM, insertbackground=GOLD).pack(fill="x", pady=5)
-listbox = tk.Listbox(left, bg="#120B06", fg=CREAM, selectbackground=GOLD, selectforeground=BG, font=("Georgia", 11))
-listbox.pack(fill="both", expand=True)
-listbox.bind("<<ListboxSelect>>", lambda e: select_cigar(listbox.get(listbox.curselection())) if listbox.curselection() else None)
+preview_lbl = tk.Label(top, text="No Cigar Photo Loaded\nClick [SELECT CIGAR PHOTO]", width=32, height=11, bg=CARD, fg=CREAM, font=("Courier", 10), bd=1, relief="groove")
+preview_lbl.pack(side="left", padx=(0, 14))
 
-right = tk.Frame(main, bg=CARD, padx=25, pady=20)
-right.pack(side="right", fill="both", expand=True)
-title_lbl = tk.Label(right, text="", font=("Georgia", 19, "bold"), bg=CARD, fg=GOLD, anchor="w")
-title_lbl.pack(fill="x")
-sub_lbl = tk.Label(right, text="", font=("Courier", 11, "bold"), bg=CARD, fg=TAN, anchor="w")
-sub_lbl.pack(fill="x", pady=(2, 15))
-wrap_lbl = tk.Label(right, text="", font=("Georgia", 12), bg=CARD, fg=CREAM, anchor="w", wraplength=460, justify="left")
-wrap_lbl.pack(fill="x", pady=10)
-bar = ttk.Progressbar(right, length=400, mode="determinate", maximum=100)
-bar.pack(fill="x", pady=(15, 4))
-str_lbl = tk.Label(right, text="", font=("Courier", 10, "bold"), bg=CARD, fg=CREAM, anchor="w")
-str_lbl.pack(fill="x", pady=(0, 15))
-notes_lbl = tk.Label(right, text="", font=("Georgia", 12, "italic"), bg=CARD, fg=CREAM, anchor="w", wraplength=460, justify="left")
-notes_lbl.pack(fill="x", pady=10)
-pair_lbl = tk.Label(right, text="", font=("Georgia", 12), bg=CARD, fg=CREAM, anchor="w", wraplength=460, justify="left")
-pair_lbl.pack(fill="x", pady=10)
+ctrl = tk.Frame(top, bg=BG)
+ctrl.pack(side="left", fill="both", expand=True)
 
-refresh_list()
-select_cigar("INCH Nicaragua No. 60")
-root.lift()
+def get_client():
+    key = os.environ.get("GEMINI_API_KEY", "")
+    return genai.Client(api_key=key) if key else None
+
+def call_gemini(contents, schema=None):
+    client = get_client()
+    if not client:
+        raise Exception("Missing GEMINI_API_KEY in ~/.zshrc")
+    models = [m.name.replace("models/", "") for m in client.models.list() if "gemini" in m.name.lower() and not any(x in m.name.lower() for x in ["audio", "tts", "embedding", "vision-001", "aqa", "imagen", "veo"])]
+    models.sort(key=lambda x: (0 if "flash" in x else (1 if "lite" in x else 2), x))
+    cfg = {"response_mime_type": "application/json", "response_schema": schema} if schema else None
+    for m_name in models:
+        try:
+            res = client.models.generate_content(model=m_name, contents=contents, config=cfg)
+            if res and res.text:
+                return res.text
+        except Exception:
+            continue
+    raise Exception("AI models temporarily busy. Try again.")
+
+def choose_photo():
+    fp = filedialog.askopenfilename(title="Select Cigar Photo", filetypes=[("Images", "*.jpg *.jpeg *.png *.heic *.webp")])
+    if not fp:
+        return
+    selected_path["path"] = fp
+    img = Image.open(fp)
+    img.thumbnail((240, 180))
+    tk_img = ImageTk.PhotoImage(img)
+    preview_lbl.config(image=tk_img, text="", width=240, height=180)
+    preview_lbl.image = tk_img
+    status_lbl.config(text=f"LOADED: {os.path.basename(fp)}", fg=GOLD)
+
+def analyze_cigar():
+    fp = selected_path.get("path")
+    if not fp:
+        status_lbl.config(text="SELECT A CIGAR PHOTO FIRST", fg=AMBER)
+        return
+    btn_scan.config(state="disabled")
+    status_lbl.config(text="ANALYZING BAND & PAIRING FLIGHT...", fg=GOLD)
+    out_box.delete("1.0", tk.END)
+    out_box.insert(tk.END, "Inspecting cigar band, wrapper leaf, and crafting 3-tier pairing flight...\n")
+
+    def worker():
+        try:
+            img = Image.open(fp).convert("RGB")
+            img.thumbnail((1024, 1024))
+            prompt = "Analyze this cigar photo as a Master Cigar Sommelier. Identify brand_and_line, origin_and_wrapper, strength, tasting_notes, and curate a 3-tier pairing flight: spirits_pairing, coffee_tea_pairing, wine_beer_pairing, plus sommelier_verdict."
+            raw = call_gemini([img, prompt], schema=DesktopCigarProfile)
+            data = json.loads(raw)
+            last_profile.clear()
+            last_profile.update(data)
+
+            def render():
+                out_box.delete("1.0", tk.END)
+                out_box.insert(tk.END, f"CIGAR: {data.get('brand_and_line')}\n")
+                out_box.insert(tk.END, f"ORIGIN & WRAPPER: {data.get('origin_and_wrapper')}  |  STRENGTH: {data.get('strength')}\n")
+                out_box.insert(tk.END, f"TASTING NOTES: {', '.join(data.get('tasting_notes', []))}\n")
+                out_box.insert(tk.END, "-" * 66 + "\n")
+                out_box.insert(tk.END, f"1. SPIRITS PAIRING:      {data.get('spirits_pairing')}\n")
+                out_box.insert(tk.END, f"2. COFFEE / TEA PAIRING: {data.get('coffee_tea_pairing')}\n")
+                out_box.insert(tk.END, f"3. WINE / BEER PAIRING:  {data.get('wine_beer_pairing')}\n")
+                out_box.insert(tk.END, "-" * 66 + "\n")
+                out_box.insert(tk.END, f"SOMMELIER VERDICT: {data.get('sommelier_verdict')}\n")
+                status_lbl.config(text="ANALYSIS COMPLETE", fg=GREEN)
+                btn_scan.config(state="normal")
+            root.after(0, render)
+        except Exception as e:
+            err = str(e)
+            root.after(0, lambda: (out_box.insert(tk.END, f"\nError: {err}"), status_lbl.config(text="ERROR", fg=AMBER), btn_scan.config(state="normal")))
+
+    threading.Thread(target=worker, daemon=True).start()
+
+def pair_drink():
+    drink = drink_var.get().strip()
+    if not drink:
+        return
+    cigar_ctx = last_profile.get("brand_and_line", "a medium-to-full bodied premium cigar")
+    status_lbl.config(text=f"EVALUATING PAIRING WITH {drink.upper()}...", fg=GOLD)
+
+    def worker():
+        try:
+            prompt = f"As Master Cigar Sommelier for Fointein AI, evaluate pairing '{drink}' with {cigar_ctx}. Rate synergy (1-10) and give 2 crisp sentences on why the flavors work or clash."
+            ans = call_gemini([prompt])
+            root.after(0, lambda: (out_box.insert(tk.END, f"\n[CUSTOM DRINK CHECK: {drink.upper()}]\n{ans.strip()}\n"), out_box.see(tk.END), status_lbl.config(text="PAIRING EVALUATED", fg=GREEN)))
+        except Exception as e:
+            err = str(e)
+            root.after(0, lambda: out_box.insert(tk.END, f"\nError: {err}\n"))
+
+    threading.Thread(target=worker, daemon=True).start()
+
+tk.Button(ctrl, text="1. SELECT CIGAR PHOTO", font=("Courier", 11, "bold"), bg="#2A1A10", fg=GOLD, command=choose_photo, pady=8).pack(fill="x", pady=(0, 8))
+btn_scan = tk.Button(ctrl, text="2. ANALYZE BAND & PAIRING FLIGHT", font=("Courier", 11, "bold"), bg="#D4AF37", fg="#120C08", command=analyze_cigar, pady=8)
+btn_scan.pack(fill="x", pady=(0, 12))
+
+tk.Label(ctrl, text="PAIR MY DRINK (Enter Rum, Bourbon, Espresso, etc.):", font=("Courier", 9, "bold"), bg=BG, fg=CREAM, anchor="w").pack(fill="x")
+drink_row = tk.Frame(ctrl, bg=BG)
+drink_row.pack(fill="x", pady=(4, 0))
+drink_var = tk.StringVar()
+tk.Entry(drink_row, textvariable=drink_var, bg=CARD, fg=CREAM, insertbackground=CREAM, font=("Courier", 10)).pack(side="left", fill="x", expand=True, ipady=5, padx=(0, 6))
+tk.Button(drink_row, text="MATCH", font=("Courier", 10, "bold"), bg="#2A1A10", fg=GOLD, command=pair_drink, padx=10, pady=4).pack(side="right")
+
+out_box = scrolledtext.ScrolledText(root, height=15, bg=CARD, fg=CREAM, font=("Courier", 10), bd=1, relief="groove", wrap=tk.WORD)
+out_box.pack(fill="both", expand=True, padx=20, pady=(6, 16))
+out_box.insert(tk.END, "Welcome to Fointein AI Cigar Sommelier v2.0 (Desktop Edition).\nSelect a cigar photo above to identify the blend and unlock your 3-tier pairing flight.\n")
+
 root.mainloop()
