@@ -48,7 +48,7 @@ def launch_all_systems():
         ("scanner.py", "Network Scanner", f"{col_w-15}x{row_h-30}+{col_w+10}+35"),
         ("commander.py", "Mac Commander", f"{col_w-15}x{row_h-30}+{(col_w*2)+10}+35"),
         ("streamer.py", "Market Streamer", f"{col_w-15}x{row_h-30}+10+{row_h+45}"),
-        ("cigar_scanner.py", "cyber_guard.py", "Cigar Sommelier", f"{(col_w*2)-15}x{row_h-30}+{col_w+10}+{row_h+45}")
+        ("cigar_scanner.py", "cyber_guard.py", "jarvis_desk.py", "Cigar Sommelier", f"{(col_w*2)-15}x{row_h-30}+{col_w+10}+{row_h+45}")
     ]
     
     for script, name, pos in modules:
@@ -100,13 +100,14 @@ create_launch_btn(hub_frame, "🕹️ MAC COMMANDER", "CPU, RAM & SSD Stats", "#
 create_launch_btn(hub_frame, "📈 MARKET STREAMER", "Crypto, TSLA & Gold", "#FFD700", "streamer.py")
 create_launch_btn(hub_frame, "🍂 CIGAR SOMMELIER", "AI Band Vision & Humidor", "#D4AF37", "cigar_scanner.py")
 create_launch_btn(hub_frame, "🛡️ CYBERGUARD AI", "Home Vulnerability & Port Auditor", "#00FF66", "cyber_guard.py")
+create_launch_btn(hub_frame, "JARVIS v2.1", "Gemini Audio Voice Desk Console", "#00E6FF", "jarvis_desk.py")
 
 divider = tk.Frame(hub_frame, height=2, bg="#30363D")
 divider.pack(fill="x", pady=15)
 
 all_btn = tk.Button(
     hub_frame,
-    text="⚡ DEPLOY ALL 6 SYSTEMS ⚡",
+    text="⚡ DEPLOY ALL 7 SYSTEMS ⚡",
     font=("Courier", 12, "bold"),
     bg="#1F6FEB",
     fg="white",
